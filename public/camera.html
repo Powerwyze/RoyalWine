@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Royal Wine | Take a Picture</title>
+    <link rel="stylesheet" href="styles/main.css" />
+  </head>
+  <body>
+    <main class="camera-shell">
+      <a class="camera-shell__back" href="index.html">Back to gallery</a>
+      <div class="camera-frame">
+        <video
+          id="camera-feed"
+          class="camera-frame__video"
+          autoplay
+          playsinline
+          muted
+        ></video>
+        <div id="camera-countdown" class="camera-countdown" aria-live="assertive"></div>
+      </div>
+      <div id="email-modal" class="email-modal" hidden>
+        <div class="email-modal__panel" role="dialog" aria-modal="true" aria-labelledby="email-modal-title">
+          <h2 id="email-modal-title">Enter email before taking your photo</h2>
+          <label class="email-modal__label" for="email-input">Email</label>
+          <input
+            id="email-input"
+            class="email-modal__input"
+            type="text"
+            autocomplete="off"
+            autocorrect="off"
+            inputmode="none"
+            placeholder="Type email with the keyboard below"
+          />
+          <div id="quick-domain-buttons" class="email-modal__quick">
+            <button type="button" class="email-key email-key--action" data-insert="@gmail.com">@gmail.com</button>
+            <button type="button" class="email-key email-key--action" data-insert="@yahoo.com">@yahoo.com</button>
+            <button type="button" class="email-key email-key--action" data-insert="@outlook.com">@outlook.com</button>
+            <button type="button" class="email-key email-key--action" data-insert="@icloud.com">@icloud.com</button>
+          </div>
+          <div id="osk-keys" class="email-modal__keyboard" aria-label="On-screen keyboard">
+            <div class="email-modal__keyboard-row">
+              <button type="button" class="email-key" data-char="q">Q</button>
+              <button type="button" class="email-key" data-char="w">W</button>
+              <button type="button" class="email-key" data-char="e">E</button>
+              <button type="button" class="email-key" data-char="r">R</button>
+              <button type="button" class="email-key" data-char="t">T</button>
+              <button type="button" class="email-key" data-char="y">Y</button>
+              <button type="button" class="email-key" data-char="u">U</button>
+              <button type="button" class="email-key" data-char="i">I</button>
+              <button type="button" class="email-key" data-char="o">O</button>
+              <button type="button" class="email-key" data-char="p">P</button>
+            </div>
+            <div class="email-modal__keyboard-row">
+              <button type="button" class="email-key" data-char="a">A</button>
+              <button type="button" class="email-key" data-char="s">S</button>
+              <button type="button" class="email-key" data-char="d">D</button>
+              <button type="button" class="email-key" data-char="f">F</button>
+              <button type="button" class="email-key" data-char="g">G</button>
+              <button type="button" class="email-key" data-char="h">H</button>
+              <button type="button" class="email-key" data-char="j">J</button>
+              <button type="button" class="email-key" data-char="k">K</button>
+              <button type="button" class="email-key" data-char="l">L</button>
+            </div>
+            <div class="email-modal__keyboard-row">
+              <button type="button" class="email-key" data-char="z">Z</button>
+              <button type="button" class="email-key" data-char="x">X</button>
+              <button type="button" class="email-key" data-char="c">C</button>
+              <button type="button" class="email-key" data-char="v">V</button>
+              <button type="button" class="email-key" data-char="b">B</button>
+              <button type="button" class="email-key" data-char="n">N</button>
+              <button type="button" class="email-key" data-char="m">M</button>
+              <button type="button" class="email-key" data-char="@">@</button>
+              <button type="button" class="email-key" data-char=".">.</button>
+            </div>
+            <div class="email-modal__keyboard-row">
+              <button type="button" class="email-key" data-char="1">1</button>
+              <button type="button" class="email-key" data-char="2">2</button>
+              <button type="button" class="email-key" data-char="3">3</button>
+              <button type="button" class="email-key" data-char="4">4</button>
+              <button type="button" class="email-key" data-char="5">5</button>
+              <button type="button" class="email-key" data-char="6">6</button>
+              <button type="button" class="email-key" data-char="7">7</button>
+              <button type="button" class="email-key" data-char="8">8</button>
+              <button type="button" class="email-key" data-char="9">9</button>
+              <button type="button" class="email-key" data-char="0">0</button>
+            </div>
+            <div class="email-modal__keyboard-row">
+              <button type="button" class="email-key email-key--action" id="email-space">Space</button>
+              <button type="button" class="email-key email-key--action" id="email-backspace">Backspace</button>
+              <button type="button" class="email-key email-key--action" id="email-clear">Clear</button>
+            </div>
+          </div>
+          <div class="email-modal__actions">
+            <span id="email-error" class="email-modal__error" role="alert" aria-live="polite"></span>
+            <button id="email-enter" type="button" class="email-key email-key--enter">Enter / Start Countdown</button>
+            <button id="email-cancel" type="button" class="email-key email-key--cancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+      <div class="camera-controls">
+        <button id="capture-button" class="capture-button">Take a picture</button>
+        <span id="capture-status" class="capture-status"></span>
+      </div>
+      <canvas id="camera-canvas" hidden></canvas>
+    </main>
+    <script src="scripts/camera.js"></script>
+  </body>
+</html>

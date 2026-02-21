@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Royal Wine Corp | Cans Gallery</title>
+    <link rel="stylesheet" href="styles/main.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three/build/three.module.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <header class="landing-shell">
+      <div class="landing-shell__inner">
+        <img
+          class="brand__logo"
+          src="assets/royal-wine-corp-logo.png"
+          alt="Royal Wine Corp"
+        />
+        <a class="version-switch" href="index-v2.html">V2</a>
+      </div>
+    </header>
+    <main>
+      <section class="camera-entry" aria-label="Camera actions">
+        <button class="camera-entry__button" id="open-camera-button">
+          Take a picture
+        </button>
+      </section>
+      <section class="model-button-grid" id="gallery" aria-label="Can collection"></section>
+      <section class="about-action">
+        <button class="about-royal-button" type="button" data-popup-url="https://royalwine.com/about-us/">
+          About Royal wine
+        </button>
+      </section>
+      <section class="about-action">
+        <button class="about-royal-button" type="button" data-popup-url="https://royalwine.com/brand/">
+          Brands
+        </button>
+      </section>
+      <section class="about-action">
+        <button class="about-royal-button" type="button" data-popup-url="https://bartenura.com/">
+          Shop Bartenura
+        </button>
+      </section>
+      <div class="gallery-empty" id="gallery-empty" hidden>
+        Royal Wine can products will show up here once products are added to the kiosk data file.
+      </div>
+    </main>
+    <div class="about-royal-modal" id="about-royal-modal" hidden>
+      <div class="about-royal-modal__panel">
+        <button
+          class="about-royal-modal__close"
+          id="about-royal-close"
+          type="button"
+          aria-label="Close"
+        >
+          x
+        </button>
+        <iframe
+          id="about-royal-frame"
+          class="about-royal-modal__frame"
+          src="https://royalwine.com/about-us/"
+          title="Royal Wine About"
+          sandbox="allow-scripts allow-forms"
+          loading="eager"
+        ></iframe>
+      </div>
+    </div>
+    <script>
+      const aboutUrls = {
+        about: "https://royalwine.com/about-us/",
+        brands: "https://royalwine.com/brand/",
+        bartenura: "https://bartenura.com/",
+      };
+
+      const aboutModal = document.getElementById("about-royal-modal");
+      const aboutFrame = document.getElementById("about-royal-frame");
+      const popupButtons = document.querySelectorAll("[data-popup-url]");
+      const aboutClose = document.getElementById("about-royal-close");
+      const cameraButton = document.getElementById("open-camera-button");
+      let activePopupUrl = aboutUrls.about;
+
+      cameraButton.addEventListener("click", () => {
+        window.location.href = "camera.html";
+      });
+
+      const isLockedAboutUrl = (value) => {
+        if (!value) return false;
+        try {
+          const parsed = new URL(value, window.location.href);
+          const target = new URL(activePopupUrl);
+          return parsed.origin === target.origin && parsed.pathname === target.pathname;
+        } catch {
+          return false;
+        }
+      };
+
+      const lockAboutNavigation = () => {
+        if (!isLockedAboutUrl(aboutFrame.src || "")) {
+          aboutFrame.src = activePopupUrl;
+        }
+      };
+
+      const closeAboutModal = () => {
+        aboutModal.hidden = true;
+        lockAboutNavigation();
+      };
+
+      const openPopup = (url) => {
+        activePopupUrl = aboutUrls[url] || url;
+        aboutModal.hidden = false;
+        aboutFrame.src = activePopupUrl;
+      };
+
+      aboutFrame.addEventListener("load", lockAboutNavigation);
+      popupButtons.forEach((button) => {
+        const popupUrl = button.getAttribute("data-popup-url");
+        button.addEventListener("click", () => openPopup(popupUrl));
+      });
+      aboutClose.addEventListener("click", closeAboutModal);
+      aboutModal.addEventListener("click", (event) => {
+        if (event.target === aboutModal) closeAboutModal();
+      });
+
+      window.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !aboutModal.hidden) {
+          closeAboutModal();
+        }
+      });
+    </script>
+    <script src="scripts/gallery.js" type="module"></script>
+  </body>
+</html>
