@@ -8,14 +8,18 @@ const emailInput = document.getElementById("email-input");
 const emailError = document.getElementById("email-error");
 const emailEnterButton = document.getElementById("email-enter");
 const emailCancelButton = document.getElementById("email-cancel");
-const keyboardButtons = document.querySelectorAll(".email-key[data-char]");
-const spaceKey = document.getElementById("email-space");
-const backspaceKey = document.getElementById("email-backspace");
-const clearKey = document.getElementById("email-clear");
-const quickDomainButtons = document.querySelectorAll("#quick-domain-buttons .email-key");
+const caricatureModal = document.getElementById("caricature-modal");
+const caricatureMessage = document.getElementById("caricature-message");
+const caricatureTitle = document.getElementById("caricature-title");
+const caricatureImage = document.getElementById("caricature-image");
+const caricatureLoader = document.getElementById("caricature-loader");
+const caricatureCloseButton = document.getElementById("caricature-close");
 
 const captureDuration = 5;
-const saveCaptureEndpoint = "http://127.0.0.1:5001/save-capture";
+const saveCaptureEndpoint = "/save-capture";
+const caricatureResultEndpoint = "/caricature-result";
+const pollDelayMs = 1500;
+const pollAttemptsMax = 90;
 
 let activeStream = null;
 let countdownId = null;
@@ -27,51 +31,21 @@ startCamera();
 button.addEventListener("click", startCaptureFlow);
 emailEnterButton.addEventListener("click", onEmailSubmit);
 emailCancelButton.addEventListener("click", closeEmailPrompt);
+caricatureCloseButton.addEventListener("click", closeCaricatureModal);
 emailInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
     onEmailSubmit();
   }
 });
-keyboardButtons.forEach((key) => {
-  key.addEventListener("click", () => {
-    const value = key.dataset.char;
-    if (!value) {
-      return;
-    }
-    emailInput.value += value;
-  });
-});
-spaceKey?.addEventListener("click", () => {
-  emailInput.value += " ";
-});
-backspaceKey?.addEventListener("click", () => {
-  emailInput.value = emailInput.value.slice(0, -1);
-});
-clearKey?.addEventListener("click", () => {
-  emailInput.value = "";
-});
-quickDomainButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    emailInput.value += button.dataset.insert || "";
-  });
-});
 
 async function startCamera() {
   try {
-    const preferredDeviceId = await pickUsbVideoDeviceId();
-    const constraints = preferredDeviceId
-      ? { video: { deviceId: { exact: preferredDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }
-      : { video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false };
+    activeStream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    });
 
-    try {
-      activeStream = await navigator.mediaDevices.getUserMedia(constraints);
-    } catch (error) {
-      activeStream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false,
-      });
-    }
     video.srcObject = activeStream;
     await video.play();
     statusText.textContent = "Press Take a picture to start";
@@ -85,9 +59,16 @@ async function startCamera() {
 
 function showEmailPrompt() {
   emailError.textContent = "";
-  emailInput.value = customerEmail || "";
+  emailInput.value = "";
   emailInput.focus({ preventScroll: true });
   emailModal.hidden = false;
+}
+
+function closeEmailPrompt() {
+  emailModal.hidden = true;
+  canCapture = true;
+  button.disabled = false;
+  emailError.textContent = "";
 }
 
 function getVideoDevices() {
@@ -95,7 +76,8 @@ function getVideoDevices() {
     return [];
   }
 
-  return navigator.mediaDevices.enumerateDevices()
+  return navigator.mediaDevices
+    .enumerateDevices()
     .then((devices) => devices.filter((device) => device.kind === "videoinput"))
     .catch(() => []);
 }
@@ -140,13 +122,6 @@ async function pickUsbVideoDeviceId() {
   return scored[0]?.device.deviceId || "";
 }
 
-function closeEmailPrompt() {
-  emailModal.hidden = true;
-  canCapture = true;
-  button.disabled = false;
-  emailError.textContent = "";
-}
-
 function isValidEmail(value) {
   const email = value.trim();
   if (!email) {
@@ -178,14 +153,47 @@ function startCaptureFlow() {
   showEmailPrompt();
 }
 
+function showCaricatureModal(message) {
+  caricatureMessage.textContent = message || "WE ARE EMAILING YOU NOW";
+  caricatureTitle.textContent = "Processing your image";
+  caricatureImage.hidden = true;
+  caricatureImage.src = "";
+  caricatureLoader.hidden = false;
+  caricatureModal.hidden = false;
+}
+
+function closeCaricatureModal() {
+  caricatureModal.hidden = true;
+  caricatureLoader.hidden = true;
+}
+
+function setStatusBusy() {
+  button.disabled = true;
+  canCapture = false;
+}
+
+function setStatusReady() {
+  button.disabled = false;
+  canCapture = true;
+}
+
 function startCountdown(secondsLeft) {
   let remaining = secondsLeft;
   countdown.style.display = "flex";
-  countdown.textContent = String(remaining);
+
+  // First 5 seconds show "STEP BACK"
+  if (remaining > 5) {
+    countdown.textContent = "STEP BACK";
+  } else {
+    countdown.textContent = String(remaining);
+  }
 
   countdownId = setInterval(() => {
     remaining -= 1;
-    if (remaining > 0) {
+    if (remaining > 5) {
+      countdown.textContent = "STEP BACK";
+      return;
+    } else if (remaining > 0) {
       countdown.textContent = String(remaining);
       return;
     }
@@ -199,8 +207,7 @@ function startCountdown(secondsLeft) {
 function capturePhoto() {
   if (!video.videoWidth || !video.videoHeight) {
     statusText.textContent = "Waiting for camera, try again.";
-    canCapture = true;
-    button.disabled = false;
+    setStatusReady();
     return;
   }
 
@@ -213,9 +220,45 @@ function capturePhoto() {
   sendPhotoToServer(dataUrl, customerEmail);
 }
 
-async function sendPhotoToServer(dataUrl, email) {
-  statusText.textContent = "Saving photo...";
+async function waitForCaricatureResult(jobId) {
+  for (let attempt = 0; attempt < pollAttemptsMax; attempt += 1) {
+    const response = await fetch(
+      `${caricatureResultEndpoint}?job_id=${encodeURIComponent(jobId)}`,
+    );
 
+    if (!response.ok) {
+      throw new Error(`Result service returned ${response.status}`);
+    }
+
+    const payload = await response.json();
+    if (payload?.status === "ready" && payload.imageData) {
+      return payload;
+    }
+
+    if (payload?.status === "failed") {
+      throw new Error(payload.error || "Failed to generate caricature.");
+    }
+
+    if (attempt === 0) {
+      caricatureMessage.textContent = "WE ARE EMAILING YOU NOW";
+    } else if (attempt % 10 === 0) {
+      caricatureMessage.textContent = "WE ARE EMAILING YOU NOW";
+    }
+
+    await delay(pollDelayMs);
+  }
+
+  throw new Error("Timed out waiting for caricature generation.");
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function sendPhotoToServer(dataUrl, email) {
+  statusText.textContent = "Sending photo...";
+  setStatusBusy();
+  showCaricatureModal("Sending your photo...");
   try {
     const response = await fetch(saveCaptureEndpoint, {
       method: "POST",
@@ -226,28 +269,30 @@ async function sendPhotoToServer(dataUrl, email) {
     });
 
     if (!response.ok) {
-      throw new Error(`Save service returned ${response.status}`);
+      throw new Error(`Server returned ${response.status}`);
     }
 
     const payload = await response.json();
-    if (!payload || !payload.path) {
-      throw new Error("Save service returned no path.");
+    if (payload?.status !== "success") {
+      throw new Error(payload?.error || "Failed to send photo");
     }
 
-    statusText.textContent = "You will receive your image from Wyzer@powerwyze.com";
-    clearTimeout(window.__captureStatusClearTimeout);
-    window.__captureStatusClearTimeout = setTimeout(() => {
-      if (statusText.textContent === "You will receive your image from Wyzer@powerwyze.com") {
-        statusText.textContent = "";
-      }
-    }, 2500);
+    // Show success message
+    caricatureLoader.hidden = true;
+    caricatureTitle.textContent = "Photo sent successfully!";
+    caricatureMessage.textContent = "Your photo has been sent to " + email;
+    caricatureImage.hidden = true;
   } catch (error) {
     console.error(error);
-    statusText.textContent =
-      "Could not save photo. Make sure the local save service is running on port 5001.";
+    caricatureLoader.hidden = true;
+    caricatureTitle.textContent = "Unable to send photo";
+    caricatureMessage.textContent = `Error: ${error.message}`;
+    caricatureImage.hidden = true;
   } finally {
-    button.disabled = false;
-    canCapture = true;
+    setTimeout(() => {
+      statusText.textContent = "";
+    }, 1200);
+    setStatusReady();
   }
 }
 
