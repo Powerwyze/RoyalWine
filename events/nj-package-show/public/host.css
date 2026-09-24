@@ -62,7 +62,7 @@ body[data-phase="result"] #face,body[data-email-open="true"] #face{transform:non
 @media(max-height:600px) and (min-width:700px){body[data-phase="idle"] header{top:80px;left:4vw;right:auto;max-width:38vw}.brand{font-size:65px}.event-title{font-size:22px}.event-meta{font-size:11px}#face{width:49vh;transform:translateX(22vw)}#message{bottom:4vh}.event-title br{display:none}}
 
 
-/* Live voice captions sit immediately above Julian, with a bounded reading window. */
+/* Live voice captions sit immediately above Blue, with a bounded reading window. */
 #stage{--sun-width:min(80vw,55vh,680px);--sun-shift:4vh;--sun-x:50%}
 #face{width:var(--sun-width);transform:translateY(var(--sun-shift))}
 #hostCaptions{position:absolute;z-index:5;left:var(--sun-x);bottom:calc(50% + var(--sun-width)*.6 - var(--sun-shift) + 12px);transform:translateX(-50%);width:min(88vw,820px);padding:18px 26px;border:1px solid #7ddac58c;border-radius:22px;background:#14272ef2;box-shadow:0 10px 40px #07131955;backdrop-filter:blur(16px);text-align:center;pointer-events:none}
@@ -98,3 +98,6 @@ header{gap:12px}.brand-logo{width:clamp(110px,17vw,175px);height:auto;max-height
 
 .brand-lockup{display:flex;align-items:center;justify-content:center;gap:12px}.brand-lockup img{width:120px;height:54px;object-fit:contain;background:#faf6ec;border-radius:7px;padding:9px 12px;box-sizing:border-box}.brand-lockup .partner-logo{width:124px}.event-meta{letter-spacing:.07em;font-size:clamp(11px,1.5vw,18px)}
 @media(max-width:500px){.brand-lockup{gap:7px}.brand-lockup img,.brand-lockup .partner-logo{width:91px;height:42px;padding:7px 8px}.event-title{font-size:36px}.event-meta{font-size:11px}}
+
+/* Product-inspired host: fallback eyes and mouth match the cobalt bottle. */
+#head{transform-origin:243px 380px}#eyes{transform-origin:243px 299px}

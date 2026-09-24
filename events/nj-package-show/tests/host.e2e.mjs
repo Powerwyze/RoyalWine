@@ -94,7 +94,7 @@ try{
   assert.equal(await pending.locator('#sentryToggle').isVisible(),false);
   assert.equal(await pending.locator('#setupLink').isVisible(),true);
   await pending.locator('#face').dispatchEvent('click');await pending.locator('#sentryToggle').dispatchEvent('click');await pending.keyboard.press('Escape');
-  assert.equal(await pending.locator('#headline').innerText(),'Julian is getting ready.');
+  assert.equal(await pending.locator('#headline').innerText(),'Blue is getting ready.');
   assert.equal(await pending.evaluate(()=>window.__mediaRequests),0);assert.equal(providerRequests,0);
   await pending.route('**/api/health',route=>route.fulfill({status:503,body:'Unavailable'}));
   await pending.reload();await pending.waitForFunction(()=>document.body.dataset.configuration==='unavailable');
@@ -105,15 +105,15 @@ try{
   assert.match(await page.locator('.event-title').innerText(),/Great connections[.\s]*A royal portrait/);
   assert.equal(await page.locator('.event-meta').innerText(),'Bartenura · Black Irish · October 28, 2026');
   await page.locator('#face').click();await page.waitForFunction(()=>document.body.dataset.phase==='listening');
-  // Captions are actual outgoing deltas, safely rendered above Julian at kiosk and phone sizes.
+  // Captions are actual outgoing deltas, safely rendered above Blue at kiosk and phone sizes.
   const say=async delta=>page.evaluate(delta=>window.__channel.emit({type:'session.output_transcript.delta',delta}),delta);
   const captionBounds=async()=>page.evaluate(()=>{
     const caption=document.querySelector('#hostCaptions').getBoundingClientRect(),sun=document.querySelector('#face').getBoundingClientRect();
     return {above:caption.bottom<=sun.top+1,onScreen:caption.top>=74&&caption.left>=0&&caption.right<=innerWidth,width:caption.width,captionBottom:caption.bottom,sunTop:sun.top};
   });
   assert.equal(await page.locator('#hostCaptions').isVisible(),false);
-  await say("Hey, I'm Julian! ");await say("Looking good! How many people are joining your photo?");
-  assert.equal(await page.locator('#hostCaptionText').textContent(),"Hey, I'm Julian! Looking good! How many people are joining your photo?");
+  await say("Hey, I'm Blue! ");await say("Looking good! How many people are joining your photo?");
+  assert.equal(await page.locator('#hostCaptionText').textContent(),"Hey, I'm Blue! Looking good! How many people are joining your photo?");
   for(const [label,viewport] of [
     ['portrait',{width:1080,height:1920}],
     ['mobile',{width:390,height:844}],
@@ -122,7 +122,7 @@ try{
   ]){
     await page.setViewportSize(viewport);
     await page.waitForFunction(()=>{const c=document.querySelector('#hostCaptions').getBoundingClientRect(),s=document.querySelector('#face').getBoundingClientRect();return c.bottom<=s.top+1&&c.top>=74;},null,{timeout:10000});
-    const bounds=await captionBounds();assert.ok(bounds.above&&bounds.onScreen,'Captions must sit above Julian and inside '+label+': '+JSON.stringify(bounds));
+    const bounds=await captionBounds();assert.ok(bounds.above&&bounds.onScreen,'Captions must sit above Blue and inside '+label+': '+JSON.stringify(bounds));
     await page.screenshot({path:'artifacts/host-captions-'+label+'.png'});
   }
   await page.setViewportSize({width:390,height:844});await page.waitForTimeout(1000);
@@ -361,6 +361,23 @@ try{
   assert.equal(await page.locator('#sentryCamera').evaluate(e=>e.srcObject===null),true);
   assert.equal(await page.locator('#sentryToggle').getAttribute('aria-pressed'),'false');
   await fs.writeFile('artifacts/sentry-idle-report.json',JSON.stringify({idleWindowMs:30000,occupiedSceneRearmed:true,speechAndTouchExtend:true,assistantAndStatusDoNotExtend:true,generationProtected:true,emailSendProtected:true,emptySceneNoRequest:true,manualStopStaysOff:true,greetings},null,2));
+  // Renderer failure must retain the same recognizable product host.
+  const fallback=await context.newPage();const fallbackErrors=[];
+  fallback.on('pageerror',e=>fallbackErrors.push(e.message));
+  await fallback.route('**/assets/host-avatar.glb',r=>r.abort('failed'));
+  await fallback.goto('http://127.0.0.1:4181/host.html');
+  await fallback.waitForFunction(()=>document.querySelector('#face').dataset.avatar==='fallback');
+  assert.equal(await fallback.locator('#face > svg').isVisible(),true);
+  for(const size of [{width:1080,height:1920},{width:390,height:844}]){
+    await fallback.setViewportSize(size);await fallback.waitForTimeout(300);
+    const bounds=await fallback.locator('#face').boundingBox();
+    assert.ok(bounds.width>200&&bounds.height>200);
+    assert.equal(await fallback.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+    await fallback.screenshot({path:'artifacts/host-fallback-'+(size.width===390?'phone':'portrait')+'.png'});
+  }
+  assert.deepEqual(fallbackErrors,[]);await fallback.close();
+  await page.setViewportSize({width:1080,height:1920});await page.waitForTimeout(300);
+  await page.locator('#face').screenshot({path:'artifacts/brand-avatar-only.png'});
   assert.deepEqual(errors,[]);
   console.log('Face host browser checks passed: portrait/mobile, readiness, camera warmup/cancellation, five-second countdown, top-left viewfinder, duplicate calls, image reveal, guard rejection, explicit retry, reset, cleanup.');
 }finally{await browser.close();server.close();}

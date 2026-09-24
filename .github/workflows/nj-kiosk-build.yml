@@ -45,7 +45,7 @@ jobs:
           curl -fL --retry 3 -A 'Mozilla/5.0' https://royalwine.com/wp-content/uploads/2020/06/KedemFullColorLogo-152x0-c-default.png -o public/assets/royal-wine-logo.png
           curl -fL --retry 3 -A 'Mozilla/5.0' https://royalwine.com/wp-content/uploads/2020/03/bartenura-logo-e1587649879353-152x0-c-default.jpg -o public/assets/bartenura-logo.jpg
           curl -fL --retry 3 -A 'Mozilla/5.0' https://royalwine.com/wp-content/uploads/2023/03/Black-Irish-Logo_1-01-152x0-c-default.png -o public/assets/black-irish-logo.png
-      - name: Build Julian in trade-show attire remotely
+      - name: Build Bartenura product-inspired host remotely
         run: blender --background --python-exit-code 1 --python scripts/create-host-avatar.py
       - name: Resolve dependencies on cloud runner
         run: |
@@ -62,9 +62,9 @@ jobs:
         run: |
           git config user.name 'PowerWyze build'
           git config user.email 'actions@users.noreply.github.com'
-          git add design/julian.blend public/assets public/vendor tests/fixtures package-lock.json
+          git add design/bartenura-host.blend public/assets public/vendor tests/fixtures package-lock.json
           if ! git diff --cached --quiet; then
-            git commit -m "Build Julian and vendor kiosk runtime remotely [skip ci]"
+            git commit -m "Build Bartenura host and vendor kiosk runtime remotely [skip ci]"
             git pull --rebase origin codex/nj-package-voice-host
             git push origin HEAD:codex/nj-package-voice-host
           fi
@@ -74,6 +74,6 @@ jobs:
           name: royal-wine-nj-kiosk-verification
           path: |
             events/nj-package-show/artifacts/
-            events/nj-package-show/design/julian.blend
+            events/nj-package-show/design/bartenura-host.blend
             events/nj-package-show/public/assets/host-avatar.glb
           retention-days: 7

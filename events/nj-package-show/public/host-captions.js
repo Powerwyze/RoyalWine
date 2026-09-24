@@ -1,4 +1,4 @@
-// Display only Julian's outgoing speech, never microphone/email transcription.
+// Display only Blue's outgoing speech, never microphone/email transcription.
 export class HostCaptions {
   constructor(box,text,home,anchor){
     this.box=box;this.text=text;this.home=home;this.anchor=anchor;

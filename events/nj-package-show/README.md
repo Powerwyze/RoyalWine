@@ -2,9 +2,11 @@
 
 DEMO-009 · October 28, 2026. The voice-photo kiosk is an isolated application in `events/nj-package-show` in the existing RoyalWine repository. Vercel root directory: `events/nj-package-show`; output: `public`. Existing gallery/capture source and its drkiosk5 deployment remain intact. Work runs remotely: GitHub source, Actions Blender/dependencies/tests, and Vercel deployment.
 
-Julian is an original adult AI guide in a navy business blazer, open ivory shirt and official Kedem badge. The matching SVG fallback preserves the visual identity. Original lightly stylized 3D geometry has realistic business attire, blinking, gentle scanning/listening motion and audio-reactive mouth shapes; it is not a photoreal human or phoneme-perfect lip sync. Host name/appearance are creative defaults because the intake leaves the name open. No official catchphrase is invented.
+Blue is an original product-inspired AI guide, built around Bartenura's recognizable cobalt bottle and dark-blue capsule. Its face sits above the official Bartenura brand panel. A separate black-glass, green-capsule Black Irish display and a Kedem exhibition plinth tie it to this client's portfolio. The geometry and matching SVG fallback are designed for this event; this is an original character concept, not official retail packaging or an approved brand mascot. No real employee or celebrity likeness is used. Mouth animation, blinking and small listening tilts remain audio-reactive, not phoneme-perfect lip sync. No official catchphrase is invented.
 
 The navy/cobalt/gold gallery portrait setting is imaginative, not a claim about the venue. Official Kedem, Bartenura and Black Irish logo assets appear in the interface. While generation runs, the host asks about guest/buyer interests, listens, gives one relevant product fact, and follows up or offers a booth-staff handoff. Known names, company and preferences are remembered only within the visit. Silence, interruptions and delays are handled without repeated pitches. See `lib/royal-wine-event.js` for the bounded fact sheet.
+
+Product-form references: https://royalwine.com/wines/bartenura-moscato-750ml/ and https://royalwine.com/spirits-liqueurs/black-irish-original-liqueur-750-ml/. The source's Bartenura cobalt bottle and Black Irish black/green packaging inform the silhouette/materials. Existing official logo assets remain intact. Original decorative labels make no product-specification claims.
 
 ## Setup and operator activation
 
@@ -14,11 +16,11 @@ User-authorized handoff: **BUILD COMPLETE — KEYS PENDING**. Missing configurat
 
 ## Sources and provenance
 
-Brief/date/features: user task-sheet DEMO-009. Facts verified September 24, 2026 at https://royalwine.com/brand/bartenura/, https://royalwine.com/brand/black-irish/, https://goblackirish.com/ and https://goblackirish.com/pages/about. The supplied www.kedem.com was unavailable. Brand facts do not establish show stock, pricing, pours or distribution. Staff must confirm those and specific labels/allergens/service eligibility. Do not infer visitor age/religion, promote to a stated minor, or insert drinking/handheld alcohol props into portraits.
+Brief/date/features: user task-sheet DEMO-009, with the user's subsequent requirement that avatars visibly relate to the client, brand or event. Facts verified September 24, 2026 at https://royalwine.com/brand/bartenura/, https://royalwine.com/brand/black-irish/, https://goblackirish.com/ and https://goblackirish.com/pages/about. The supplied www.kedem.com was unavailable. Brand facts do not establish show stock, pricing, pours or distribution. Staff must confirm those and specific labels/allergens/service eligibility. Do not infer visitor age/religion, promote to a stated minor, or insert drinking/handheld alcohol props into portraits.
 
 Official logos: https://royalwine.com/wp-content/uploads/2020/06/KedemFullColorLogo-152x0-c-default.png, https://royalwine.com/wp-content/uploads/2020/03/bartenura-logo-e1587649879353-152x0-c-default.jpg, https://royalwine.com/wp-content/uploads/2023/03/Black-Irish-Logo_1-01-152x0-c-default.png.
 
-Behavior adapted from the verified Royal Wine Florida/Bytesbee voice-kiosk lineage. Event facts, art, business attire, generation conversation, image prompt and email were deliberately adapted for this separate trade event. Three.js and MediaPipe license files are bundled.
+Behavior adapted from the verified Royal Wine Florida/Bytesbee voice-kiosk lineage. Event facts, art, product-inspired host, generation conversation, image prompt and email were deliberately adapted for this separate trade event. Three.js and MediaPipe license files are bundled.
 
 ## Remote verification
 

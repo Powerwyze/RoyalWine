@@ -13,7 +13,7 @@ export async function mountAvatar(face,canvas){
   let model;
   try{model=(await new GLTFLoader().loadAsync('/assets/host-avatar.glb')).scene;}catch(e){renderer.dispose();throw e;}
   scene.add(model);
-  const mouths=[],eyes=[];
+  const mouths=[],eyes=[];const speakingBottle=model.getObjectByName('Bartenura_Bottle_Host');
   model.traverse(node=>{
 
     if(node.morphTargetDictionary?.jawOpen!==undefined)mouths.push(node);
@@ -32,7 +32,8 @@ export async function mountAvatar(face,canvas){
     for(const mesh of mouths){mesh.morphTargetInfluences[mesh.morphTargetDictionary.jawOpen]=jaw;const r=mesh.morphTargetDictionary.mouthRound;if(r!==undefined)mesh.morphTargetInfluences[r]=round*jaw;}
     const blinkTime=(time%5400)/5400,blink=blinkTime>.94?Math.max(.06,Math.abs(blinkTime-.97)/.03):1;
     for(const {node,scale} of eyes)node.scale.y=scale.y*(reduced.matches?1:blink);
-    model.rotation.y=reduced.matches?0:Math.sin(time/3900)*.018;
+    model.rotation.y=reduced.matches?0:Math.sin(time/3900)*.012;
+    if(speakingBottle){speakingBottle.rotation.z=reduced.matches?0:Math.sin(time/3100)*.018;speakingBottle.position.y=reduced.matches?0:Math.sin(time/2700)*.012;}
     model.rotation.z=reduced.matches?0:Math.sin(time/4700)*.015;
     model.position.y=reduced.matches?0:Math.sin(time/2700)*.025;
     renderer.render(scene,camera);

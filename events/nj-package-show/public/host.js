@@ -19,7 +19,7 @@ const wait=(ms,signal)=>new Promise((resolve,reject)=>{
   const timer=setTimeout(()=>{signal?.removeEventListener('abort',abort);resolve();},ms);
   signal?.addEventListener('abort',abort,{once:true});
 });
-function text(title,hint=''){ $('headline').textContent=configured?title:'Julian is getting ready.';$('hint').textContent=configured?hint:configurationHint; }
+function text(title,hint=''){ $('headline').textContent=configured?title:'Blue is getting ready.';$('hint').textContent=configured?hint:configurationHint; }
 function phase(value){if(document.body.dataset.phase!==value)captions.clear();document.body.dataset.phase=value;$('sentryToggle').disabled=!configured||!sentry.enabled&&!['idle','error'].includes(value);}
 function send(event){if(!ready||events?.readyState!=='open'||(ending&&event.type!=='session.close'))return;events.send(JSON.stringify({event_id:crypto.randomUUID(),...event}));}
 function note(content,speak=false){send({type:speak?'session.commentary.append':'session.thinking.append',delegation_id:null,content});}
@@ -35,7 +35,7 @@ const sentry=new CameraSentry({
     if(!ready&&!connecting){
       if(status==='watching')text('Looking good starts here.',message||'Walk into view to meet your AI photo host.');
       else if(status==='greeting')text('Hello there.','Your host is getting ready to say hello.');
-      else if(message)text('Tap Julian to begin.',message);
+      else if(message)text('Tap Blue to begin.',message);
     }
   }
 });
@@ -45,7 +45,7 @@ function stopSentry(){
 }
 $('sentryToggle').addEventListener('click',async()=>{
   if(!configured)return;
-  if(sentry.enabled||sentryEnabling){stopSentry();if(ready||connecting)end();else text('Say hello to Julian.','Tap Julian to begin · AI photo host');return;}
+  if(sentry.enabled||sentryEnabling){stopSentry();if(ready||connecting)end();else text('Say hello to Blue.','Tap Blue to begin · AI photo host');return;}
   if(ready||connecting)return;
   const setup=++sentrySetup;sentryEnabling=true;
   $('sentryToggle').textContent='Stop sentry setup';
@@ -221,7 +221,7 @@ const toolLoop=new LiveTools({send,execute:async(name,args)=>{
   if(name==='reset_booth'&&args.confirmed===true)clearEmail();
   return engine.execute(name,args);
 }});
-function cleanup(message='Tap Julian to begin · AI photo host'){
+function cleanup(message='Tap Blue to begin · AI photo host'){
   sessionEpoch++;ready=false;connecting=false;ending=false;captions.clear();
   guestIdle.stop();stopEventTalk();clearEmail();sentry.finish({immediate:rearmImmediately});rearmImmediately=false;
   requestController?.abort();requestController=null;
@@ -234,7 +234,7 @@ function cleanup(message='Tap Julian to begin · AI photo host'){
   toolLoop.clear();engine.reset();hidePicture();$('countdown').hidden=true;
   $('end').hidden=true;$('audioResume').hidden=true;
   face.setAttribute('aria-label','Start talking to your AI photo host');
-  phase('idle');text(sentry.enabled?'Looking good starts here.':'Say hello to Julian.',sentry.enabled?'Camera sentry is on · Walk into view to begin.':message);
+  phase('idle');text(sentry.enabled?'Looking good starts here.':'Say hello to Blue.',sentry.enabled?'Camera sentry is on · Walk into view to begin.':message);
 }
 function end({idle=false}={}){
   if(ending)return;
@@ -248,7 +248,7 @@ function end({idle=false}={}){
 async function ice(connection,signal){
   if(connection.iceGatheringState==='complete')return;
   for(let i=0;i<100;i++){await wait(100,signal);if(connection.iceGatheringState==='complete')return;}
-  throw new Error('The voice connection could not reach the network. Tap Julian to retry.');
+  throw new Error('The voice connection could not reach the network. Tap Blue to retry.');
 }
 async function begin({sentryGreeting=null}={}){
   if(!configured||connecting||ready||ending)return;
@@ -285,7 +285,7 @@ async function begin({sentryGreeting=null}={}){
           let ack;try{ack=JSON.parse(data);}catch{return;}
           if(ack.type==='session.instructions.appended'&&ack.client_event_id===greeting){
             channel.removeEventListener('message',listener);
-            note(sentryGreeting?'A nearby visitor was detected by camera sentry. Deliver the frame-based welcome now, then listen. Do not take a photo yet.':'A new visitor has tapped Julian and is ready to meet the AI photo host. Greet them now and ask how many people are posing.',true);
+            note(sentryGreeting?'A nearby visitor was detected by camera sentry. Deliver the frame-based welcome now, then listen. Do not take a photo yet.':'A new visitor has tapped Blue and is ready to meet the AI photo host. Greet them now and ask how many people are posing.',true);
           }
         };
         channel.addEventListener('message',listener);
@@ -298,14 +298,14 @@ async function begin({sentryGreeting=null}={}){
         if(ready&&!ending&&!['idle','connecting','countdown'].includes(document.body.dataset.phase))captions.append(event.delta);
       }
       else if(event.type==='error'){
-        text('Your host needs a moment.','The connection had a problem. End and tap Julian to reconnect.');
+        text('Your host needs a moment.','The connection had a problem. End and tap Blue to reconnect.');
       } else {
         toolLoop.receive(event).catch(()=>text('Let’s try that again.','Please repeat your request.'));
       }
     });
-    channel.addEventListener('close',()=>{if(epoch===sessionEpoch&&!ending)cleanup('Connection ended. Tap Julian to reconnect.');});
+    channel.addEventListener('close',()=>{if(epoch===sessionEpoch&&!ending)cleanup('Connection ended. Tap Blue to reconnect.');});
     connection.addEventListener('connectionstatechange',()=>{
-      if(epoch===sessionEpoch&&connection.connectionState==='failed')cleanup('Connection lost. Tap Julian to reconnect.');
+      if(epoch===sessionEpoch&&connection.connectionState==='failed')cleanup('Connection lost. Tap Blue to reconnect.');
     });
     await connection.setLocalDescription(await connection.createOffer());await ice(connection,requestController.signal);
     const response=await fetch('/api/host-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sdp:connection.localDescription.sdp}),signal:AbortSignal.any([requestController.signal,AbortSignal.timeout(30000)])});
@@ -313,10 +313,10 @@ async function begin({sentryGreeting=null}={}){
     if(!response.ok)throw new Error(result.error||'Your host could not connect.');
     if(epoch!==sessionEpoch)return;
     await connection.setRemoteDescription({type:'answer',sdp:result.transport.sdp});
-    if(!ready)startTimer=setTimeout(()=>{if(epoch===sessionEpoch&&!ready)cleanup('The host did not connect. Tap Julian to retry.');},20000);
+    if(!ready)startTimer=setTimeout(()=>{if(epoch===sessionEpoch&&!ready)cleanup('The host did not connect. Tap Blue to retry.');},20000);
   }catch(error){
     if(epoch!==sessionEpoch)return;
-    const message=error.name==='NotAllowedError'?'Please allow microphone access, then tap Julian again.':error.message;
+    const message=error.name==='NotAllowedError'?'Please allow microphone access, then tap Blue again.':error.message;
     cleanup(message);phase('error');text('Let’s get connected.',message);
   }
 }
@@ -406,10 +406,10 @@ fetch('/api/health',{cache:'no-store',signal:AbortSignal.timeout(10000)})
     document.body.dataset.configuration=configured?'ready':'pending';
     configurationHint='This experience is being prepared. Please check back soon.';
     face.disabled=!configured;
-    face.setAttribute('aria-label',configured?'Start talking to your AI photo host':'Julian is getting ready');
+    face.setAttribute('aria-label',configured?'Start talking to your AI photo host':'Blue is getting ready');
     $('sentryToggle').disabled=!configured;
     $('setupLink').hidden=configured;
-    text('Say hello to Julian.','Tap Julian to make your event portrait');
+    text('Say hello to Blue.','Tap Blue to make your event portrait');
   }).catch(()=>{
     document.body.dataset.configuration='unavailable';
     configurationHint='Availability could not be checked. Please refresh to try again.';
