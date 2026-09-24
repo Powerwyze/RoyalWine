@@ -56,7 +56,8 @@ panel('Open collar left',[(-.18,-.213,.04),(-.02,-.233,-.045),(-.10,-.26,-.24),(
 panel('Open collar right',[(.18,-.213,.04),(.02,-.233,-.045),(.10,-.26,-.24),(.22,-.262,-.11)],cream)
 curve('Blue lanyard',[(-.12,-.275,-.17),(-.085,-.34,-.46),(0,-.345,-.55),(.085,-.34,-.46),(.12,-.275,-.17)],.009,coral)
 bpy.ops.mesh.primitive_plane_add(size=2,location=(0,-.354,-.51),rotation=(math.pi/2,0,0));badge=bpy.context.object;badge.name='Official Kedem badge';badge.scale=(.14,.075,1);badge.parent=root
-badge_mat=mat('Kedem badge artwork',(1,1,1));nodes=badge_mat.node_tree.nodes;tex=nodes.new('ShaderNodeTexImage');tex.image=bpy.data.images.load(os.path.abspath('public/assets/royal-wine-logo.png'));badge_mat.node_tree.links.new(tex.outputs['Color'],nodes.get('Principled BSDF').inputs['Base Color']);badge.data.materials.append(badge_mat)
+badge_mat=mat('Kedem badge artwork',(1,1,1));nodes=badge_mat.node_tree.nodes;tex=nodes.new('ShaderNodeTexImage');tex.image=bpy.data.images.load(os.path.abspath('public/assets/royal-wine-logo.png'));badge_mat.node_tree.links.new(tex.outputs['Color'],nodes.get('Principled BSDF').inputs['Base Color']);badge_mat.node_tree.links.new(tex.outputs['Alpha'],nodes.get('Principled BSDF').inputs['Alpha']);badge_mat.blend_method='BLEND';badge.data.materials.append(badge_mat)
+bpy.ops.mesh.primitive_plane_add(size=2,location=(0,-.350,-.51),rotation=(math.pi/2,0,0));backer=bpy.context.object;backer.name='Official Kedem badge backer';backer.scale=(.145,.080,1);backer.parent=root;backer.data.materials.append(cream)
 sphere('Nose bridge',(0,-.320,.803),(.032,.036,.074),skin)
 sphere('Nose tip',(0,-.353,.764),(.043,.042,.041),skin)
 sphere('Gold lapel pin',(.37,-.245,-.31),(.031,.011,.038),gold)
