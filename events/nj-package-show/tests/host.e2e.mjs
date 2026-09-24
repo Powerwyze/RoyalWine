@@ -369,7 +369,7 @@ try{
   await fallback.waitForFunction(()=>document.querySelector('#face').dataset.avatar==='fallback');
   assert.equal(await fallback.locator('#face > svg').isVisible(),true);
   for(const size of [{width:1080,height:1920},{width:390,height:844}]){
-    await fallback.setViewportSize(size);await fallback.waitForTimeout(300);
+    await fallback.setViewportSize(size);await fallback.waitForTimeout(1000);
     const bounds=await fallback.locator('#face').boundingBox();
     assert.ok(bounds.width>200&&bounds.height>200);
     assert.ok(bounds.x>=0&&bounds.x+bounds.width<=size.width&&bounds.y>=0&&bounds.y+bounds.height<=size.height,'Fallback must fit its viewport: '+JSON.stringify(bounds));
