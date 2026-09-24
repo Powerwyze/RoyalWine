@@ -1,0 +1,79 @@
+name: Build and verify Royal Wine NJ kiosk remotely
+on:
+  push:
+    branches: [codex/nj-package-voice-host]
+    paths: ['events/nj-package-show/**', '.github/workflows/nj-kiosk-build.yml']
+    # The asset commit includes [skip ci] to prevent rebuild loops.
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: events/nj-package-show
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/nj-package-voice-host
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Blender on the cloud runner
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y blender python3-numpy
+      - name: Vendor pinned browser renderer and local presence detector
+        run: |
+          mkdir -p public/vendor/three/addons/loaders public/vendor/three/addons/utils public/vendor/vision tests/fixtures
+          npm pack three@0.180.0 --pack-destination "$RUNNER_TEMP"
+          tar -xzf "$RUNNER_TEMP/three-0.180.0.tgz" -C "$RUNNER_TEMP"
+          cp "$RUNNER_TEMP/package/build/three.module.min.js" "$RUNNER_TEMP/package/build/three.core.min.js" public/vendor/three/
+          cp "$RUNNER_TEMP/package/examples/jsm/loaders/GLTFLoader.js" public/vendor/three/addons/loaders/
+          cp "$RUNNER_TEMP/package/examples/jsm/utils/BufferGeometryUtils.js" public/vendor/three/addons/utils/
+          cp "$RUNNER_TEMP/package/LICENSE" public/vendor/three/LICENSE
+          npm pack @mediapipe/tasks-vision@0.10.21 --pack-destination "$RUNNER_TEMP"
+          mkdir -p "$RUNNER_TEMP/vision-package"
+          tar -xzf "$RUNNER_TEMP/mediapipe-tasks-vision-0.10.21.tgz" -C "$RUNNER_TEMP/vision-package"
+          cp "$RUNNER_TEMP/vision-package/package/vision_bundle.mjs" public/vendor/vision/
+          cp -R "$RUNNER_TEMP/vision-package/package/wasm" public/vendor/vision/
+          curl -fL https://raw.githubusercontent.com/google-ai-edge/mediapipe/master/LICENSE -o public/vendor/vision/LICENSE
+          curl -fL https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/int8/1/efficientdet_lite0.tflite -o public/assets/person-detector.tflite
+          curl -fL https://storage.googleapis.com/mediapipe-assets/pose.jpg -o tests/fixtures/sentry-person.jpg
+          curl -fL --retry 3 -A 'Mozilla/5.0' https://royalwine.com/wp-content/uploads/2020/06/KedemFullColorLogo-152x0-c-default.png -o public/assets/royal-wine-logo.png
+          curl -fL --retry 3 -A 'Mozilla/5.0' https://royalwine.com/wp-content/uploads/2020/03/bartenura-logo-e1587649879353-152x0-c-default.jpg -o public/assets/bartenura-logo.jpg
+          curl -fL --retry 3 -A 'Mozilla/5.0' https://royalwine.com/wp-content/uploads/2023/03/Black-Irish-Logo_1-01-152x0-c-default.png -o public/assets/black-irish-logo.png
+      - name: Build Julian in trade-show attire remotely
+        run: blender --background --python-exit-code 1 --python scripts/create-host-avatar.py
+      - name: Resolve dependencies on cloud runner
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          npm ci --ignore-scripts
+      - name: Regression checks
+        run: npm test
+      - name: Portrait and phone browser checks
+        run: |
+          npm install --no-save --package-lock=false playwright@1.56.1
+          npx playwright install --with-deps chromium
+          node tests/host.e2e.mjs
+      - name: Save verified assets to source
+        run: |
+          git config user.name 'PowerWyze build'
+          git config user.email 'actions@users.noreply.github.com'
+          git add design/julian.blend public/assets public/vendor tests/fixtures package-lock.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Build Julian and vendor kiosk runtime remotely [skip ci]"
+            git pull --rebase origin codex/nj-package-voice-host
+            git push origin HEAD:codex/nj-package-voice-host
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: royal-wine-nj-kiosk-verification
+          path: |
+            events/nj-package-show/artifacts/
+            events/nj-package-show/design/julian.blend
+            events/nj-package-show/public/assets/host-avatar.glb
+          retention-days: 7

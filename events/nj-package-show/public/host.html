@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#152b27">
+<title>Royal Wine · NJ Package Show</title>
+<link rel="stylesheet" href="/host.css">
+<script type="importmap">{"imports":{"three":"/vendor/three/three.module.min.js","three/addons/":"/vendor/three/addons/"}}</script>
+</head>
+<body data-phase="idle" data-configuration="checking">
+<main id="stage" aria-label="Royal Wine voice photo experience">
+  <div class="ambient" aria-hidden="true"></div>
+  <header id="intro"><div class="brand-lockup"><img class="brand-logo" src="/assets/royal-wine-logo.png" alt="Kedem"><img class="partner-logo" src="/assets/bartenura-logo.jpg" alt="Bartenura"><img class="partner-logo" src="/assets/black-irish-logo.png" alt="Black Irish"></div><span class="eyebrow">ROYAL WINE · NJ PACKAGE SHOW</span><h1 class="event-title">Great connections.<br>A royal portrait.</h1><p class="event-meta">Bartenura · Black Irish · October 28, 2026</p></header>
+  <img id="picture" alt="Your Royal Wine New Jersey portrait" hidden>
+  <section id="hostCaptions" aria-label="Julian’s live captions" hidden>
+    <span class="caption-speaker">Julian says</span>
+    <p id="hostCaptionText"></p>
+  </section>
+  <button id="face" type="button" disabled aria-label="Julian is getting ready">
+    <canvas id="avatar" aria-label="Animated Royal Wine brand ambassador"></canvas>
+<svg viewBox="0 0 600 720" role="img" aria-label="Julian, your Royal Wine AI host"><defs><linearGradient id="jacket" x2="1" y2="1"><stop stop-color="#244470"/><stop offset="1" stop-color="#12243f"/></linearGradient></defs><g id="head"><path d="M112 700V520Q122 443 224 425H376Q478 443 488 520V700Z" fill="url(#jacket)"/><path d="M250 420L245 470L300 610L355 470L350 420Z" fill="#f4eddb"/><rect x="258" y="360" width="84" height="95" rx="25" fill="#b97c58"/><ellipse cx="300" cy="267" rx="111" ry="145" fill="#393332"/><ellipse cx="300" cy="295" rx="101" ry="136" fill="#cc956d"/><path d="M201 245Q184 135 272 141Q375 125 402 230L390 270Q350 233 332 202Q273 250 201 245Z" fill="#393332"/><path d="M208 235L218 284M390 230L379 279" stroke="#9e9690" stroke-width="11"/><g id="eyes"><ellipse cx="259" cy="292" rx="22" ry="12" fill="#fff8ed"/><ellipse cx="341" cy="292" rx="22" ry="12" fill="#fff8ed"/><g id="pupils" fill="#2d2724"><circle cx="261" cy="292" r="8"/><circle cx="339" cy="292" r="8"/></g></g><path d="M241 270Q257 259 276 267M324 267Q341 259 359 270" stroke="#393332" stroke-width="7" stroke-linecap="round" fill="none"/><g id="mouth" style="transform-origin:300px 352px"><path d="M267 345Q300 366 333 345Q300 380 267 345" fill="#6e3536"/><path d="M274 350Q300 361 326 350" stroke="#fff8ef" stroke-width="6" fill="none"/></g><path d="M256 445L294 473L278 509L245 480M344 445L306 473L322 509L355 480" fill="#fff8e9"/><path d="M279 502L289 555H311L321 502" stroke="#274c80" stroke-width="5" fill="none"/><rect x="277" y="548" width="46" height="29" rx="3" fill="#faf6ec"/><image href="/assets/royal-wine-logo.png" x="281" y="554" width="38" height="16"/><path d="M221 446L243 529L278 576L260 491M379 446L357 529L322 576L340 491" fill="#271d22"/><circle cx="390" cy="505" r="8" fill="#d8bb70"/></g></svg>
+  </button>
+  <div id="message" role="status" aria-live="polite"><p id="headline">Julian is getting ready.</p><p id="hint">Checking availability…</p></div>
+  <button id="emailOpen" hidden>Email my photo</button>
+  <div id="emailToast" role="status" hidden>Photo accepted for delivery.</div>
+  <section id="emailPanel" role="dialog" aria-modal="true" aria-labelledby="emailTitle" hidden>
+    <div class="email-heading"><div><span class="eyebrow">YOUR EVENT MOMENT, TO GO</span><h1 id="emailTitle">Did I get that right?</h1></div><button id="emailCancel" type="button" aria-label="Skip email">Skip</button></div>
+    <p id="emailHelp">Check your spelled email. Tap the address to move the cursor, then use the keyboard to correct it.</p>
+    <label for="emailInput">Email address</label>
+    <input id="emailInput" type="text" inputmode="none" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" maxlength="254" aria-describedby="emailHelp emailStatus">
+    <p id="emailStatus" role="status"></p>
+    <div id="emailKeyboard" aria-label="Email keyboard"></div>
+    <div id="emailDomains" aria-label="Common email endings"></div>
+    <button id="emailConfirm" type="button" disabled>Confirm &amp; email photo</button>
+    <p class="email-note">Send this photo to the address you confirm.</p>
+  </section>
+  <aside id="viewfinder" aria-label="Live camera preview during countdown" hidden>
+    <video id="camera" autoplay playsinline muted aria-label="Your camera framing"></video>
+    <span>YOUR FRAME</span>
+  </aside>
+  <div id="countdown" aria-live="assertive" hidden></div>
+  <a id="setupLink" href="/setup" hidden>Operator setup</a>
+  <button id="sentryToggle" type="button" disabled aria-pressed="false">Enable camera sentry</button>
+  <p id="sentryNotice" role="status" hidden></p>
+  <button id="end" aria-label="End conversation and clear photo" hidden>End</button>
+  <button id="audioResume" hidden>Tap to hear your host</button>
+</main>
+<video id="sentryCamera" autoplay playsinline muted aria-hidden="true"></video>
+<canvas id="capture" hidden></canvas>
+<audio id="voice" autoplay></audio>
+<script src="/email-shortcuts.js"></script>
+<script type="module" src="/host.js"></script>
+</body></html>
