@@ -103,7 +103,7 @@ try{
   assert.equal(await pending.locator('#face').isEnabled(),true);assert.equal(await pending.locator('#setupLink').isVisible(),false);await pending.close();
   await page.reload();await page.evaluate(()=>document.fonts.ready);await page.evaluate(async()=>{const image=new Image();image.src='/assets/trade-background.svg';await image.decode();});await page.waitForFunction(()=>document.querySelector('#face').dataset.avatar==='ready',null,{timeout:20000});await page.waitForTimeout(1000);await page.screenshot({path:'artifacts/host-idle-portrait.png'});
   assert.match(await page.locator('.event-title').innerText(),/Great connections[.\s]*A royal portrait/);
-  assert.equal(await page.locator('.event-meta').innerText(),'A portrait to keep. A conversation to savor.');
+  assert.equal(await page.locator('.event-meta').innerText(),'Bartenura · Black Irish · October 28, 2026');
   await page.locator('#face').click();await page.waitForFunction(()=>document.body.dataset.phase==='listening');
   // Captions are actual outgoing deltas, safely rendered above Julian at kiosk and phone sizes.
   const say=async delta=>page.evaluate(delta=>window.__channel.emit({type:'session.output_transcript.delta',delta}),delta);
