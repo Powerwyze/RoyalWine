@@ -1,0 +1,81 @@
+name: Verify published Royal Wine NJ remotely
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Exact Royal Wine Vercel deployment URL
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  public-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: events/nj-package-show
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Final source regression checks
+        run: |
+          npm ci --ignore-scripts
+          npm test
+          for file in api/*.js public/*.js lib/*.js; do node --check "$file"; done
+      - name: Install browser on cloud runner
+        run: |
+          npm install --no-save --package-lock=false playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Inspect the actual public deployment
+        env:
+          KIOSK_URL: ${{ inputs.url }}
+        run: |
+          node --input-type=module <<'JS'
+          import { chromium } from 'playwright';
+          import fs from 'node:fs/promises';
+          import assert from 'node:assert/strict';
+          const url=new URL(process.env.KIOSK_URL);
+          assert.ok(url.protocol==='https:' && /^royal-wine-nj-package-kiosk(?:-[a-z0-9-]+-powerwyzes-projects)?\.vercel\.app$/.test(url.hostname));
+          await fs.mkdir('artifacts',{recursive:true});
+          const browser=await chromium.launch({args:['--enable-unsafe-swiftshader']});
+          const context=await browser.newContext();
+          const page=await context.newPage(),errors=[];let providerRequests=0;page.on('request',r=>{if(/\/api\/(host-session|host-greeting|banana|send-photo)/.test(r.url()))providerRequests++;});await page.addInitScript(()=>{window.__mediaRequests=0;navigator.mediaDevices.getUserMedia=async()=>{window.__mediaRequests++;throw new Error('No media during deployment verification');};});
+          page.on('pageerror',e=>errors.push(e.message));
+          const response=await page.goto(url.origin,{waitUntil:'networkidle'});assert.equal(response.status(),200);
+          await page.waitForFunction(()=>document.querySelector('#face')?.dataset.avatar==='ready',{timeout:30000});
+          assert.equal(await page.locator('.brand-lockup img').evaluateAll(es=>es.length===3&&es.every(e=>e.complete&&e.naturalWidth>0)),true);
+          assert.match(await page.locator('.event-title').innerText(),/Great connections[.\s]*A royal portrait/);
+          for(const [name,viewport] of [['portrait',{width:1080,height:1920}],['phone',{width:390,height:844}]]){
+            await page.setViewportSize(viewport);await page.waitForTimeout(1200);
+            assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+            await page.screenshot({path:'artifacts/public-'+name+'.png'});
+          }
+          const glb=await context.request.get(url.origin+'/assets/host-avatar.glb');assert.equal(glb.status(),200);assert.equal((await glb.body()).subarray(0,4).toString(),'glTF');
+          const health=await context.request.get(url.origin+'/api/health');assert.equal(health.status(),200);
+          const providers=await health.json();assert.equal(providers.packetId,'DEMO-009');
+          const host=await page.goto(url.origin+'/host',{waitUntil:'networkidle'});assert.equal(host.status(),200);
+          await page.waitForFunction(()=>document.querySelector('#face')?.dataset.avatar==='ready');
+          const configured=providers.voiceConfigured&&providers.imageConfigured&&providers.emailConfigured&&providers.hostEnabled;
+          await page.waitForFunction(()=>['ready','pending'].includes(document.body.dataset.configuration));
+          assert.equal(await page.locator('#face').isDisabled(),!configured);
+          if(!configured){await page.locator('#face').dispatchEvent('click');await page.locator('#sentryToggle').dispatchEvent('click');assert.equal(await page.evaluate(()=>window.__mediaRequests),0);assert.equal(providerRequests,0);assert.equal(await page.locator('#setupLink').isVisible(),true);}
+          const setup=await page.goto(url.origin+'/setup',{waitUntil:'networkidle'});assert.equal(setup.status(),200);
+          await page.waitForFunction(()=>!document.querySelector('#refresh').disabled);
+          assert.equal(await page.locator('#statusTitle').innerText(),configured?'Configured · live checks next':'Build complete · keys pending');
+          assert.match(await page.locator('.variables').innerText(),/OPENAI_API_KEY/);
+          assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+          await page.screenshot({path:'artifacts/public-setup-phone.png',fullPage:true});
+          assert.deepEqual(errors,[]);
+          const report={url:url.origin,publicRoutes:true,avatar:true,logo:true,portraitAndPhone:true,errors,providers,providerTesting:'Not performed by this visual check. Live voice, image and email checks are separate requirements.'};
+          await fs.writeFile('artifacts/public-report.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+          await browser.close();
+          JS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: published-royal-wine-nj-review
+          path: events/nj-package-show/artifacts/
+          retention-days: 7
