@@ -26,7 +26,7 @@ white=material('Eyes',(.96,.97,.94),.3)
 root=bpy.data.objects.new('Royal_Wine_Product_Host',None);bpy.context.collection.objects.link(root)
 main=bpy.data.objects.new('Bartenura_Bottle_Host',None);bpy.context.collection.objects.link(main);main.parent=root;main.location.x=-.32
 companion=bpy.data.objects.new('Black_Irish_Display',None);bpy.context.collection.objects.link(companion);companion.parent=root
-companion.location=(.64,.24,-.35);companion.scale=(.66,.66,.66)
+companion.location=(.64,.24,-.52);companion.scale=(.66,.66,.66)
 
 def profile(name,rings,mat,parent):
  sides=96;verts=[];faces=[]
@@ -123,8 +123,8 @@ front_text('Black_Irish_Origin','IRELAND',(0,-.477,-.58),.07,ivory,companion)
 # Separate exhibition base carries the parent client mark, not a fictitious crossover product label.
 profile('Royal_Wine_Exhibition_Base',[(-1.56,.86),(-1.46,.86),(-1.42,.80)],cap,root)
 profile('Exhibition_Base_Gold_Rim',[(-1.47,.86),(-1.45,.86)],gold,root)
-plane('Kedem_Platform_Plaque',(0,-.842,-1.51),(.20,.044),ivory,root)
-artwork('Official_Kedem_Platform_Logo','public/assets/royal-wine-logo.png',(0,-.847,-1.51),(.19,.041),root)
+plane('Kedem_Platform_Plaque',(0,-.871,-1.51),(.20,.044),ivory,root)
+artwork('Official_Kedem_Platform_Logo','public/assets/royal-wine-logo.png',(0,-.875,-1.51),(.19,.041),root)
 
 os.makedirs('design',exist_ok=True);os.makedirs('public/assets',exist_ok=True)
 bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath('design/bartenura-host.blend'))

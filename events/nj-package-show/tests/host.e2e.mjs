@@ -372,6 +372,9 @@ try{
     await fallback.setViewportSize(size);await fallback.waitForTimeout(300);
     const bounds=await fallback.locator('#face').boundingBox();
     assert.ok(bounds.width>200&&bounds.height>200);
+    assert.ok(bounds.x>=0&&bounds.x+bounds.width<=size.width&&bounds.y>=0&&bounds.y+bounds.height<=size.height,'Fallback must fit its viewport: '+JSON.stringify(bounds));
+    const svgBounds=await fallback.locator('#face > svg').boundingBox();
+    assert.ok(Math.abs(svgBounds.width-bounds.width)<1&&Math.abs(svgBounds.height-bounds.height)<1,'Fallback and canvas must share the same box');
     assert.equal(await fallback.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
     await fallback.screenshot({path:'artifacts/host-fallback-'+(size.width===390?'phone':'portrait')+'.png'});
   }
