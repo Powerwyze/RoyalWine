@@ -1,3 +1,4 @@
+import { openaiFetch } from './openai-fetch.js';
 // Count/foreground guard: never return image bytes unless verification completes.
 export const SUBJECT_CHECK_MODEL = 'gpt-4.1-mini-2025-04-14';
 
@@ -18,7 +19,7 @@ export function parseSubjectCheck(data) {
 }
 
 export async function verifySubjects({ apiKey, sourceUrl, outputUrl, guestCount, signal }) {
-  const response = await fetch('https://api.openai.com/v1/responses', {
+  const response = await openaiFetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     signal: AbortSignal.any([signal, AbortSignal.timeout(25000)]),

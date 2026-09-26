@@ -1,3 +1,4 @@
+import { openaiFetch } from '../lib/openai-fetch.js';
 import { verifySubjects } from '../lib/subject-check.js';
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
@@ -17,7 +18,7 @@ function jsonResponse(body, status) {
 
 export async function POST(req) {
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY || process.env.OPENAI_BACKUP;
     if (!apiKey) return jsonResponse({ error: 'OPENAI_API_KEY is not configured on the server.' }, 500);
 
     const fd = await req.formData();
@@ -68,7 +69,7 @@ FINAL CHECK: Exactly ${guestCount} distinct foreground guests from the source an
       n: 1,
     };
 
-    const response = await fetch('https://api.openai.com/v1/images/edits', {
+    const response = await openaiFetch('https://api.openai.com/v1/images/edits', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,

@@ -76,7 +76,7 @@ try{
     const terminal=events.findLast(e=>e.type==='response.event'&&e.event?.type==='response.completed');
     return !!lastMessage&&!!terminal&&events.indexOf(terminal)>events.indexOf(lastMessage);
   },null,{timeout:45000});
-  await ask('Yes, the two of us are ready now. Take our photo and generate the standard warm Flow smash-burger event portrait.');
+  await ask('Yes, the two of us are ready now. Take our photo and generate the standard portrait for this event.');
   await page.waitForFunction(()=>document.body.dataset.phase==='countdown',null,{timeout:45000});
   assert.equal(await page.locator('#viewfinder').isVisible(),true);
   await page.screenshot({path:'artifacts/host-live-countdown.png'});
@@ -93,7 +93,7 @@ try{
     const terminal=events.findLast(e=>e.type==='response.event'&&e.event?.type==='response.completed');
     return !!call&&window.__liveSent.some(e=>e.item?.call_id===call)&&events.indexOf(final)>events.indexOf(callEvent)&&events.indexOf(terminal)>events.indexOf(final);
   },null,{timeout:45000});
-  // User-authorized internal mailbox; real SMTP acceptance, never a client recipient.
+  // User-authorized internal mailbox; real Resend acceptance, never a client recipient.
   await ask('Please email my photo. I will spell the full address: w y z e r, at, p o w e r w y z e, dot, c o m. That is my complete email spelling. Show it for me to check.');
   await page.locator('#emailPanel').waitFor({state:'visible',timeout:60000});
   assert.equal(await page.locator('#emailInput').inputValue(),'wyzer@powerwyze.com');
@@ -113,7 +113,6 @@ try{
     errors:window.__liveEvents.filter(e=>e.type==='error').map(e=>e.error)
   }));
   await page.screenshot({path:'artifacts/host-live-result.png'});
-  assert.match(report.spokenOutput,/smash.?burger|Charmaine|crispy.*crust/i,'Generation chatter must discuss the supplied event.');
   assert.doesNotMatch(report.spokenOutput,/rooftop pool|Technogym|coworking|leasing|fitness classes|Old.Fashioned|Damn Good|bartender/i,'Do not pitch apartment amenities to residents.');
   console.log('Real GPT Live smoke:',JSON.stringify(report));
   assert.ok(report.captionUpdates>5,'Live captions must stream throughout the conversation.');

@@ -1,8 +1,7 @@
-import nodemailer from 'nodemailer';
+import { photoEmailConfig } from '../lib/photo-email-config.js';
 import { Resend } from 'resend';
 import { createHash } from 'node:crypto';
 
-const smtpDeliveries=new Map();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const EMAIL_TEXT = 'Your Royal Wine NJ Package Show portrait is attached. Thanks for connecting with us at the show!\n\nExplore Royal Wine: https://royalwine.com/\nBlack Irish: https://goblackirish.com/\nPowered by PowerWyze Smart Stations: https://powerwyze.com/\nhttps://www.instagram.com/powerwyze/';
@@ -20,11 +19,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    const resendApiKey = process.env.RESEND_API_KEY;
-    if (!resendApiKey && !(process.env.WYZER_APP_PASSWORD || process.env.GOOGLE_APP_PASSWORD)) {
-      res.status(500).send('Email delivery is not configured.');
-      return;
-    }
+    const config = photoEmailConfig();
+    if (!config.configured) return res.status(503).json({ok:false,error:'Photo email setup is incomplete. Please ask the event operator.'});
+    const resendApiKey = config.apiKey;
 
     const { email, filename, mimeType, imageBase64 } = req.body || {};
     if (!email || !EMAIL_PATTERN.test(String(email)) || !imageBase64) {
@@ -45,10 +42,10 @@ export default async function handler(req, res) {
       return;
     }
 
-    const resend = resendApiKey ? new Resend(resendApiKey) : null;
+    const resend = new Resend(resendApiKey);
     const finalFilename = cleanFilename(filename, 'royal-wine-nj-portrait.jpg');
-    const from = process.env.RESEND_FROM_EMAIL || 'Royal Wine Photo Host <onboarding@resend.dev>';
-    const replyTo = process.env.RESEND_REPLY_TO;
+    const from = config.from;
+    const replyTo = config.replyTo;
     // Scope idempotency to the complete provider payload. A template, sender or
     // attachment-name change is a different email; exact retries remain deduplicated.
     const message = {
@@ -65,22 +62,7 @@ export default async function handler(req, res) {
       }],
     };
     const deliveryId = createHash('sha256').update(JSON.stringify(message)).digest('hex');
-    let data,error;
-    if(resend){({data,error}=await resend.emails.send(message,{idempotencyKey:`royal-wine-photo-${deliveryId}`}));}
-    else {
-      const user=process.env.WYZER_GMAIL_USER || process.env.GMAIL_USER;
-      if(!user)return res.status(503).json({ok:false,error:'Photo email is not configured.'});
-      const transport=nodemailer.createTransport({service:'gmail',connectionTimeout:10000,socketTimeout:20000,auth:{user,pass:process.env.WYZER_APP_PASSWORD || process.env.GOOGLE_APP_PASSWORD}});
-      const task=()=>transport.sendMail({from:{name:'Royal Wine • NJ Package Show',address:user},to:message.to,subject:message.subject,text:message.text,html:message.html,
-        messageId:`<royal-wine-${deliveryId}@powerwyze.com>`,attachments:[{filename:finalFilename,content:bytes,contentType:finalMime,cid:'royal-wine-nj-portrait'}]});
-      const now=Date.now();
-      for(const [key,entry] of smtpDeliveries)if(now-entry.at>600000)smtpDeliveries.delete(key);
-      if(smtpDeliveries.size>=100)smtpDeliveries.delete(smtpDeliveries.keys().next().value);
-      if(!smtpDeliveries.has(deliveryId))smtpDeliveries.set(deliveryId,{at:now,promise:task().catch(error=>{smtpDeliveries.delete(deliveryId);throw error;})});
-      const sent=await smtpDeliveries.get(deliveryId).promise;
-      if(!sent.accepted?.length){smtpDeliveries.delete(deliveryId);return res.status(502).json({ok:false,error:'Email delivery was not accepted.'});}
-      data={id:sent.messageId};
-    }
+    const {data,error}=await resend.emails.send(message,{idempotencyKey:`royal-wine-photo-${deliveryId}`});
 
     if (error) {
       console.error('Photo email failed', {name:error.name});

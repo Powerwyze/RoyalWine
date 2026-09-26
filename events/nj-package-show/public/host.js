@@ -397,12 +397,12 @@ function animate(t){
 requestAnimationFrame(animate);
 
 // Configuration presence is a setup check, not proof that providers are working.
-// Keep camera/microphone and paid APIs untouched until the operator has configured all services.
+// Voice/photo readiness is independent of the client-specific email setup.
 fetch('/api/health',{cache:'no-store',signal:AbortSignal.timeout(10000)})
   .then(async response=>{if(!response.ok)throw new Error('Unavailable');return response.json();})
   .then(status=>{
     if(status.packetId!=='DEMO-009')throw new Error('Unexpected app');
-    configured=status.hostEnabled===true&&status.voiceConfigured===true&&status.imageConfigured===true&&status.emailConfigured===true;
+    configured=status.hostEnabled===true&&status.voiceConfigured===true&&status.imageConfigured===true;
     document.body.dataset.configuration=configured?'ready':'pending';
     configurationHint='This experience is being prepared. Please check back soon.';
     face.disabled=!configured;

@@ -1,0 +1,28 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {photoEmailConfig} from '../lib/photo-email-config.js';
+import sendPhoto from '../api/send-photo.js';
+test('Resend sends from PowerWyze with client Reply-To and confirmed guest as sole recipient',async(t)=>{
+ const names=['RESEND_API_KEY','RESEND_FROM_EMAIL','RESEND_REPLY_TO'];
+ const before=Object.fromEntries(names.map(k=>[k,process.env[k]]));const oldFetch=globalThis.fetch;
+ t.after(()=>{globalThis.fetch=oldFetch;for(const k of names){if(before[k]===undefined)delete process.env[k];else process.env[k]=before[k];}});
+ process.env.RESEND_API_KEY='resend-test';process.env.RESEND_FROM_EMAIL='wyzer@powerwyze.com';process.env.RESEND_REPLY_TO='client@example.com';
+ assert.equal(photoEmailConfig().configured,true);
+ const calls=[];
+ globalThis.fetch=async(url,options)=>{assert.equal(String(url),'https://api.resend.com/emails');calls.push({body:JSON.parse(options.body),headers:new Headers(options.headers)});return Response.json({id:'test-email-id'});};
+ const makeResponse=()=>({statusCode:200,body:null,status(n){this.statusCode=n;return this;},json(b){this.body=b;return this;},send(b){this.body=b;return this;}});
+ const req={method:'POST',body:{email:'guest@example.com',imageBase64:'aW1hZ2U=',mimeType:'image/jpeg'}};
+ let res=makeResponse();await sendPhoto(req,res);
+ assert.equal(res.statusCode,200);assert.equal(res.body.ok,true);
+ assert.equal(calls[0].body.from,'wyzer@powerwyze.com');
+ assert.equal(calls[0].body.reply_to,'client@example.com');assert.deepEqual(calls[0].body.to,['guest@example.com']);
+ assert.equal(calls[0].body.cc,undefined);assert.equal(calls[0].body.bcc,undefined);
+ const id=calls[0].headers.get('idempotency-key');assert.ok(id);
+ res=makeResponse();await sendPhoto(req,res);assert.equal(calls[1].headers.get('idempotency-key'),id);
+ process.env.RESEND_REPLY_TO='another-client@example.com';res=makeResponse();await sendPhoto(req,res);
+ assert.notEqual(calls[2].headers.get('idempotency-key'),id);
+ delete process.env.RESEND_REPLY_TO;assert.equal(photoEmailConfig().configured,false);
+ res=makeResponse();await sendPhoto(req,res);assert.equal(res.statusCode,503);assert.equal(calls.length,3);
+ process.env.RESEND_REPLY_TO='client@example.com';process.env.RESEND_FROM_EMAIL='wrong@example.com';
+ res=makeResponse();await sendPhoto(req,res);assert.equal(res.statusCode,503);assert.equal(calls.length,3);
+});

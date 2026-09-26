@@ -25,3 +25,11 @@ Behavior adapted from the verified Royal Wine Florida/Bytesbee voice-kiosk linea
 ## Remote verification
 
 Root workflows `nj-kiosk-build.yml` and `nj-kiosk-verify-published.yml` run in this application directory. Regression suite: `npm test`; full mocked-provider portrait/phone browser flow: `node tests/host.e2e.mjs`. Tests cover capture timing, presence, guest-only inactivity, group/identity checks, confirmation/retry, cleanup, private captions and missing configuration. Mocks are test-only. After activation, real provider tests accept `ROYAL_WINE_NJ_KIOSK_URL`; paid image and email test destinations require authorized test use. The published workflow verifies anonymous production, assets, responsive screenshots and honest activation status.
+
+## Shared provider activation
+
+Link the team Secrets `OPENAI_API_KEY`, `OPENAI_BACKUP` and `RESEND_API_KEY` plus shared `RESEND_FROM_EMAIL=wyzer@powerwyze.com`. Set `RESEND_REPLY_TO` to this client's confirmed contact in project settings. Never copy a different client's address.
+
+All OpenAI requests use the primary key first. A confirmed credit/quota rejection is retried once with the backup, with the same payload and deadline. Rate limits, authentication/access errors, timeouts and uncertain network failures do not replay paid work. The backup needs its own available credits and access to the same models; keys on the same exhausted billing account do not add credits. Existing active voice sessions cannot change credentials in place; reconnecting creates a new session through the guarded credential path.
+
+`.github/workflows/provider-activation.yml` runs remote regression/browser checks. Its explicit `live` dispatch verifies the deployed voice session, one real image request with independent subject checking, and one photo email to the authorized internal test mailbox when client Reply-To is configured. No secret values are read or logged. Configuration presence alone is not live verification.

@@ -1,3 +1,4 @@
+import { openaiFetch } from '../lib/openai-fetch.js';
 import { liveSessionConfig } from '../lib/host-config.js';
 const reply = (body,status=200) => Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 export async function POST(req) {
@@ -6,7 +7,7 @@ export async function POST(req) {
   // The test is available on the public Vercel test preview, unless explicitly enabled.
   if (process.env.VERCEL_ENV === 'production' && process.env.ENABLE_FACE_HOST !== 'true')
     return reply({error:'This photo host is currently available on the test link.'},403);
-  if (!process.env.OPENAI_API_KEY?.trim()) return reply({error:'The voice host is not configured.'},503);
+  if (!(process.env.OPENAI_API_KEY?.trim() || process.env.OPENAI_BACKUP?.trim())) return reply({error:'The voice host is not configured.'},503);
   try {
     const text = await req.text();
     if (text.length > 65536) return reply({error:'Connection request is too large.'},413);
@@ -14,8 +15,8 @@ export async function POST(req) {
     try { body=JSON.parse(text); } catch { return reply({error:'Invalid connection request.'},400); }
     if (typeof body.sdp !== 'string' || !body.sdp.startsWith('v=0') || !body.sdp.includes('m=audio'))
       return reply({error:'A microphone connection offer is required.'},400);
-    const upstream = await fetch('https://api.openai.com/v1/live/sessions',{
-      method:'POST', headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY.trim()}`,'Content-Type':'application/json'},
+    const upstream = await openaiFetch('https://api.openai.com/v1/live/sessions',{
+      method:'POST', headers:{Authorization:`Bearer ${(process.env.OPENAI_API_KEY || process.env.OPENAI_BACKUP).trim()}`,'Content-Type':'application/json'},
       body:JSON.stringify({session:liveSessionConfig(),transport:{type:'webrtc',sdp:body.sdp}}),
       signal:AbortSignal.any([req.signal,AbortSignal.timeout(25000)])
     });
