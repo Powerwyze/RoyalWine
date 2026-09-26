@@ -47,7 +47,7 @@ for (const count of [1, 2, 3]) {
     assert.equal(response.headers.get('cache-control'), 'no-store');
     assert.equal(await response.text(), 'synthetic-jpeg');
     assert.equal(calls.length, 2, 'one generation + one check; no paid auto-regeneration');
-    assert.equal(calls[0].init.headers.Authorization, 'Bearer test-only-placeholder');
+    assert.equal(new Headers(calls[0].init.headers).get('authorization'), 'Bearer test-only-placeholder');
     const payload = JSON.parse(calls[0].init.body);
     assert.equal(payload.model, 'gpt-image-2'); assert.equal(payload.quality, 'low');
     assert.equal(payload.size, '768x1152'); assert.equal(payload.n, 1);
@@ -140,6 +140,8 @@ test('parser never accepts malformed JSON, null, or multiple output texts', () =
 test('HTML and text email preserve PowerWyze/client links and retry idempotency', async () => {
   const originalFetch = globalThis.fetch;
   const originalKey = process.env.RESEND_API_KEY;
+  const oldFrom = process.env.RESEND_FROM_EMAIL; const oldReply = process.env.RESEND_REPLY_TO;
+  process.env.RESEND_FROM_EMAIL = 'wyzer@powerwyze.com'; process.env.RESEND_REPLY_TO = 'client@example.com';
   process.env.RESEND_API_KEY = 'test-only-placeholder';
   const calls = [];
   globalThis.fetch = async (url, init) => {
@@ -166,6 +168,7 @@ test('HTML and text email preserve PowerWyze/client links and retry idempotency'
     assert.equal(invalid.code, 400); assert.equal(calls.length, 3);
   } finally {
     globalThis.fetch = originalFetch;
+    for (const [k,v] of [['RESEND_FROM_EMAIL',oldFrom],['RESEND_REPLY_TO',oldReply]]) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
     if (originalKey === undefined) delete process.env.RESEND_API_KEY; else process.env.RESEND_API_KEY = originalKey;
   }
 });
