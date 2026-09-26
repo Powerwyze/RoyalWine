@@ -1,0 +1,52 @@
+name: Verify kiosk provider activation
+on:
+  push:
+    branches: [codex/nj-package-voice-host]
+  workflow_dispatch:
+    inputs:
+      live:
+        description: Run authorized live voice, one image and photo-email checks
+        required: false
+        default: false
+        type: boolean
+      url:
+        description: Deployed kiosk URL
+        required: false
+        default: https://royal-wine-nj-package-kiosk.vercel.app
+        type: string
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: events/nj-package-show
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install and test server changes
+        run: |
+          npm ci --ignore-scripts
+          npm test
+          for file in api/*.js lib/*.js public/*.js; do node --check "$file"; done
+      - name: Install cloud browser
+        run: |
+          npm install --no-save --package-lock=false playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Verify complete mocked guest flow
+        run: node tests/host.e2e.mjs
+      - name: Verify deployed services with authorized test data
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.live }}
+        env:
+          KIOSK_URL: ${{ inputs.url }}
+        run: node tests/provider-activation-live.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: provider-activation-verification
+          path: events/nj-package-show/artifacts/
+          retention-days: 7

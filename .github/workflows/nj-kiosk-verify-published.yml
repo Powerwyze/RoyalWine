@@ -54,6 +54,14 @@ jobs:
             await page.screenshot({path:'artifacts/public-'+name+'.png'});
           }
           const glb=await context.request.get(url.origin+'/assets/host-avatar.glb');assert.equal(glb.status(),200);assert.equal((await glb.body()).subarray(0,4).toString(),'glTF');
+          await page.locator('#face').screenshot({path:'artifacts/public-avatar-only.png'});
+          // Exercise the fallback on the deployed asset paths, not just the test server.
+          const fallback=await context.newPage();fallback.on('pageerror',e=>errors.push(e.message));
+          await fallback.route('**/assets/host-avatar.glb',r=>r.abort('failed'));
+          await fallback.goto(url.origin,{waitUntil:'networkidle'});
+          await fallback.waitForFunction(()=>document.querySelector('#face').dataset.avatar==='fallback');
+          assert.equal(await fallback.locator('#face > svg').isVisible(),true);
+          await fallback.setViewportSize({width:390,height:844});await fallback.screenshot({path:'artifacts/public-fallback-phone.png'});await fallback.close();
           const health=await context.request.get(url.origin+'/api/health');assert.equal(health.status(),200);
           const providers=await health.json();assert.equal(providers.packetId,'DEMO-009');
           const host=await page.goto(url.origin+'/host',{waitUntil:'networkidle'});assert.equal(host.status(),200);
