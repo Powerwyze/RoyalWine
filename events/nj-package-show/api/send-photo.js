@@ -23,12 +23,13 @@ export default async function handler(req, res) {
     if (!config.configured) return res.status(503).json({ok:false,error:'Photo email setup is incomplete. Please ask the event operator.'});
     const resendApiKey = config.apiKey;
 
-    const { email, filename, mimeType, imageBase64 } = req.body || {};
+    const { email, name, contactVersion, filename, mimeType, imageBase64 } = req.body || {};
     if (!email || !EMAIL_PATTERN.test(String(email)) || !imageBase64) {
       res.status(400).send('Missing required fields.');
       return;
     }
 
+    if(contactVersion===1&&(typeof name!=='string'||name.trim().length<2||name.trim().length>120))return res.status(400).json({ok:false,error:'Please enter your name.'});
     const finalMime = String(mimeType || 'image/jpeg').toLowerCase();
     if (!['image/jpeg','image/png','image/webp'].includes(finalMime)) {
       res.status(400).send('Only image attachments are supported.');
@@ -61,6 +62,8 @@ export default async function handler(req, res) {
         contentId: 'royal-wine-nj-portrait',
       }],
     };
+    const guestName=typeof name==="string"?name.trim():"";
+    if(guestName){const safe=guestName.replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));message.text="Hello "+guestName+",\n\n"+message.text;message.html=message.html.replace("<p>A NJ Package Show moment","<p>Hello "+safe+",</p><p>A NJ Package Show moment");}
     const deliveryId = createHash('sha256').update(JSON.stringify(message)).digest('hex');
     const {data,error}=await resend.emails.send(message,{idempotencyKey:`royal-wine-photo-${deliveryId}`});
 

@@ -2,15 +2,16 @@ export class BoothEngine {
   constructor({prepare=async()=>{},capture,generate,onChange=()=>{}}) {
     this.prepare=prepare;this.capture=capture;this.generate=generate;this.onChange=onChange;
     this.version=0;this.source=null;this.controller=null;this.count=null;this.attempts=0;
-    this.phase='listening';this.error='';this.image=null;
+    this.phase='listening';this.error='';this.image=null;this.theme='gallery';
   }
-  snapshot(){return {phase:this.phase,guestCount:this.count,hasPhoto:!!this.source,hasResult:!!this.image,attempts:this.attempts,error:this.error};}
+  snapshot(){return {phase:this.phase,guestCount:this.count,themeId:this.theme,hasPhoto:!!this.source,hasResult:!!this.image,attempts:this.attempts,error:this.error};}
   change(phase,extra={}){this.phase=phase;Object.assign(this,extra);this.onChange(this.snapshot(),this.image);}
-  reset(){this.version++;this.controller?.abort();this.controller=null;this.source=null;this.count=null;this.attempts=0;this.image=null;this.error='';this.change('listening');return this.snapshot();}
+  reset(){this.version++;this.controller?.abort();this.controller=null;this.source=null;this.count=null;this.theme='gallery';this.attempts=0;this.image=null;this.error='';this.change('listening');return this.snapshot();}
   async execute(name,args={}) {
     if (name==='get_booth_status') return this.snapshot();
     if (name==='reset_booth') {if(args.confirmed!==true)return {error:'Ask the visitor before clearing their picture.'};return this.reset();}
     if (['preparing','countdown','generating'].includes(this.phase)) return {...this.snapshot(),error:'A photo is already in progress. Do not start another.'};
+    if(name==='set_theme'){if(!['gallery','riviera','midnight','celebration'].includes(args.themeId))return {error:'Choose one of the four portrait themes.'};this.theme=args.themeId;this.onChange(this.snapshot(),this.image);return this.snapshot();}
     if (name==='set_guest_count') {
       if (![1,2,3].includes(args.count)) return {error:'Ask for exactly one, two, or three foreground guests.'};
       this.count=args.count;this.onChange(this.snapshot(),this.image);return this.snapshot();
@@ -38,7 +39,7 @@ export class BoothEngine {
         }
         this.attempts++;
         this.change('generating');
-        const image=await this.generate({source:this.source,count:this.count,style,signal});
+        const image=await this.generate({source:this.source,count:this.count,themeId:this.theme,style,signal});
         if(version!==this.version)return;
         this.image=image;this.change('result');
       } catch(error) {
