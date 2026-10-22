@@ -1,5 +1,6 @@
-# Camera-only correction
-- [x] Remove file selection and manual wardrobe UI; preserve camera readiness and races.
-- [x] Validate guestCount and implement visible-clothing automatic styling with unit regressions.
-- [x] Verify camera-only browser flows at kiosk/mobile sizes, real synthetic camera generation, and queued email without sending real emails.
-- [x] Update architecture, README and QA report; report verification and saved revision, without publishing.
+# Final practical illustration acceptance
+- [x] Limit Gemini edits to guest characters; retain original brand setting and recognizable painted likeness/hairstyle.
+- [x] Privately inspect Black Irish and MEXXO real outputs: practical acceptance passed in two model calls.
+- [x] Verify real fake-camera generation, PNG composite, JPEG download and mocked email payload.
+- [x] Run focused prompt/order, delivery and routing tests: 31 passed; automatic build/types OK.
+- [x] Update current docs and historical findings; report exact revision without publishing.

@@ -11,9 +11,10 @@
 
 ## Architecture
 - Kiosk rules (scenes, guest-count validation, automatic visible-clothing styling, prompt) live in `src/lib/kiosk.ts` as pure functions with tests; server routes import them so prompts are built server-side only.
-- AI generation goes through `src/routes/api/generate.ts` (Lovable AI image edits, guest photo + scene reference as two images); email goes through `src/routes/api/send-photo.ts`, which forwards to the existing Royal Wine delivery service. Browser never calls either upstream directly.
+- AI generation goes through `src/routes/api/generate.ts` using the documented Gemini image-edit JSON contract in `src/lib/image-edit.ts`: server-approved template first and camera identity/clothing reference second; this alternate renderer produces drawn faces rather than photographic edits. Image output MIME is passed to browser compositing before final JPEG export. Email goes through `/api/send-photo` unchanged; browser never calls either upstream directly.
 - Guest photos/portraits stay in browser memory only; no database or storage for guest data.
 - Scene reference images are bound server-side in `/api/generate`; the browser sends only the camera JPEG, selected scene and guestCount (integer 1–3); ignore legacy wardrobes fields so callers cannot override automatic styling.
+- Keep authoritative reference-style rendering and character-only edits in the pure prompt contract with tests; this preserves the selected environment/branding while allowing recognizable softly drawn facial translation instead of photographic pixel fidelity.
 - Email dedupe lives in `src/lib/send-dedupe.server.ts`, keyed by a SHA-256 of the full payload; only confirmed upstream `{ok:true}` counts as sent.
 
 - Guest capture is camera-only with no file-selection handlers or fallback paths; this keeps all guest capture behind live-camera readiness and operation-token race protection.

@@ -58,8 +58,8 @@ function drawScaled(src: CanvasImageSource, w: number, h: number, max = 1536) {
 }
 
 /** Composite brand plaque + AI label on the generated portrait. Returns bare base64 JPEG + data URL. */
-async function composite(b64: string, scene: SceneId) {
-  const img = await loadImage(`data:image/jpeg;base64,${b64}`);
+async function composite(b64: string, scene: SceneId, mimeType = "image/jpeg") {
+  const img = await loadImage(`data:${mimeType};base64,${b64}`);
   const c = document.createElement("canvas");
   c.width = img.naturalWidth;
   c.height = img.naturalHeight;
@@ -262,7 +262,7 @@ function Kiosk() {
       const json = await res.json().catch(() => ({}));
       if (session !== sessionRef.current || gen !== genRef.current) return;
       if (!res.ok || !json.imageBase64) throw new Error(json.error || "The portrait could not be created.");
-      const out = await composite(json.imageBase64, scene);
+      const out = await composite(json.imageBase64, scene, json.mimeType);
       if (session !== sessionRef.current || gen !== genRef.current) return;
       setOutput({ ...out, id: crypto.randomUUID(), gen });
       setPhase("result");
@@ -438,7 +438,7 @@ function Kiosk() {
               <>
                 <Loader2 className="h-10 w-10 animate-spin text-gold" aria-hidden />
                 <p className="font-serif text-2xl text-ivory">Creating your {sceneObj.title} portrait…</p>
-                <p className="text-sm text-muted-foreground">This usually takes under a minute.</p>
+                <p className="text-sm text-muted-foreground">Your illustrated portrait is being painted.</p>
                 <div className="shimmer h-1 w-40 rounded-full" />
               </>
             )}

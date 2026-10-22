@@ -2,29 +2,35 @@
 
 Live app: https://royal-wine-masquerade.lovable.app
 Editor: https://lovable.dev/projects/d9ad4bcc-97d5-4e4e-ad57-56ebb5cc3312
-Lovable source commit: 8666e63101d9c769c73f254b6280d7d6c1275625
+Lovable source commit: 8b83d6ea650c07b28dd6a0d3e256ed87ad877144
 Exported: 2026-10-22.
 
-This is a source snapshot in the intended Powerwyze/RoyalWine repository, not an automatically synchronized Lovable GitHub connection. Continue editing, dependency installation, builds and tests in Lovable or another approved remote environment.
+This is a source snapshot in Powerwyze/RoyalWine, not an automatically synchronized Lovable GitHub connection. Continue editing, dependency installation, builds and tests in Lovable or another approved remote environment.
 
-## Product
+## Product and generation
 
-A camera-only portrait photo kiosk with exactly three choices: Black Irish Masquerade, MEXXO Masquerade, and an AI masquerade portrait with Mariah Carey. The avatar is removed. Guests select one to three foreground people; there are no upload inputs, upload fallbacks, drag/drop or paste import routes, or manual outfit controls. The camera has a five-second countdown, review/retake, generation, image download, optional confirmed photo email and session reset. Camera failure offers retry and start over.
+A camera-only portrait kiosk with exactly three choices: Black Irish Masquerade, MEXXO Masquerade, and an AI masquerade portrait with Mariah Carey. No avatar, upload/import fallback or manual outfit controls. Guests choose one to three foreground people and use the five-second camera countdown, review/retake, generation, download, optional confirmed photo email and reset.
 
-Formalwear is assigned automatically from visible clothing only: dresses or skirts become the selected scene's gown; separates, trousers or suits become a tuxedo. Cropped or ambiguous clothing defaults to a tuxedo. The app does not classify gender or choose clothing from faces, hair, body, or presumed gender. The generation API validates an exact guestCount of 1, 2 or 3 and ignores legacy wardrobe fields.
+Generation now uses the documented native Lovable Gemini 3 Pro Image editor (google/gemini-3-pro-image) to match the supplied scenes' softly painted illustration style, including faces and hair. The server-selected original scene is image 1/base artwork; the camera photo is image 2/identity and clothing reference. The prompt edits guest characters while retaining the reference's brand palette, setting, architecture, bottle and label placement. The two brand scenes contain only selected foreground guests; the Mariah scene contains those guests plus exactly one Mariah. Natural artist-translated likeness and hand-painted detail variation are expected.
 
-Generation sends the camera photo and the server-selected supplied scene reference to Lovable's image-editing service. The two brand scenes request only the selected foreground guests; the Mariah scene requests those guests plus one Mariah, replacing the other reference person. Runtime AI calls use the Lovable-managed LOVABLE_API_KEY; no secret is included in this export.
+Formalwear follows visible clothing only: dresses/skirts become the scene gown; separates/trousers/suits become a tuxedo; cropped or ambiguous clothing defaults to a tuxedo. The app does not classify gender from appearance.
 
-Photo email is forwarded server-side to the existing Royal Wine Vercel delivery service. It requires email plus name (2–120 characters), confirms the address, supports Send when ready, and deduplicates complete payloads. This external delivery service must remain available. Real email delivery has not been tested.
+Normal generation uses one model call, with one bounded retry for transient 429/5xx failures. PNG output is composited in the browser and exported as JPEG for download/email. LOVABLE_API_KEY is managed by Lovable and is not included here.
+
+## Photo email
+
+The server forwards explicitly confirmed photo email to the existing Royal Wine Vercel delivery service. Name (2–120 characters) and email are required; address review, Send when ready, deduplication and reset remain. The shared email heading now says “A royal portrait.”; “Great connections.” was removed in delivery-service commit ffed3994c7170ace0c5ea079dbbbc0425a4dc0f7, deployed as dpl_3us8DNyo5k4BJ1gyJrWct4XgPNKe.
+
+The Vercel service uses existing RESEND_API_KEY, RESEND_FROM_EMAIL and RESEND_REPLY_TO variables. No new credentials were added. The Vercel application otherwise retains its prior behavior. Existing delivered emails are not modified.
 
 ## Assets and privacy
 
-The four user-supplied brand/reference JPEGs and generated logo favicon are included. The JPEGs are copied into public paths matching the Lovable asset manifests so they remain available with this source export. No private test photo, generated guest likeness, contact data, environment file, dependency installation, or build output is included. Guest source and output images are not persisted by the app; processing still involves the AI service, so this is not a claim about provider retention.
-
-The existing app in ../nj-package-show and its Vercel production deployment are unchanged by this export.
+The four user-approved brand/reference JPEGs and logo favicon remain included in public paths matching the asset manifests. No private test photo, generated guest likeness, contact data, secret/environment file, dependency installation or build output is included. Private QA media stayed in temporary Lovable sandbox storage. Guest images are not persisted by app code; generation still involves an AI provider.
 
 ## Verification
 
-See docs/QA-REPORT.md. Development and testing ran in Lovable cloud. Twenty automated tests passed. Browser checks at 1080×1920 and 390×844 covered removal of upload/outfit controls, camera denial/unavailability, disconnected tracks, full-frame mirrored preview and unmirrored capture, countdown cancellation, reset races, generation retry, contact validation, queued sending, deduplication and session cleanup. Email was mocked.
+Current Lovable correction: 31 tests passed across prompt, actual upstream template/photo ordering, delivery deduplication and routing. Automatic build/type checks passed. Real Black Irish and MEXXO calls completed in 20.6 s and 19.3 s with recognizable softly illustrated guests, source hairstyle, natural proportions, tuxedos, held masks, reference-specific settings and no bystanders. Earlier unsuccessful experiments remain marked historical in docs/QA-REPORT.md. Mariah and multiple-guest images were not regenerated with the final renderer; their prompt/count rules have test coverage.
 
-A real camera-flow generation with two synthetic guests completed in 82.4 seconds: the guest in separates received a black tuxedo with white shirt and bow tie, and the guest in a dress received an emerald gown. Exactly two guests remained. MEXXO and Mariah automatic-styling prompts were unit tested; historical real generation tests for all three scenes predate this camera-only correction. No real email was sent. Synthetic test fixtures, generated outputs and browser screenshots remain outside this repository.
+The real fake-camera browser flow passed countdown, review, generation, PNG compositing and JPEG download. The mocked email payload contained the exact downloaded JPEG and expected synthetic contact values. No real email was sent.
+
+Delivery service: 30 existing API and mocked-email tests passed in a Vercel cloud validation build of the deployed commit. The live mail endpoint returned the expected GET 405. Real inbox delivery was not retested.

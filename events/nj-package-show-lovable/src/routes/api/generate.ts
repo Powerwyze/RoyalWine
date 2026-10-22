@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { buildPrompt, getScene, parseGuestCount } from "@/lib/kiosk";
+import { getScene, parseGuestCount } from "@/lib/kiosk";
+import { buildImageEditRequest } from "@/lib/image-edit";
 import { clientKey, rateLimited } from "@/lib/rate-limit.server";
 import blackIrishRef from "@/assets/black-irish-masquerade.jpg.asset.json";
 import mexxoRef from "@/assets/mexxo-masquerade.jpg.asset.json";
@@ -12,7 +13,6 @@ const REFERENCE_URL: Record<string, string> = {
   mariah: mariahRef.url,
 };
 
-const MODEL = "openai/gpt-image-2.5-sunburst";
 const MAX_BYTES = 8 * 1024 * 1024;
 
 function err(status: number, message: string) {
@@ -48,27 +48,22 @@ export const Route = createFileRoute("/api/generate")({
         if (!refRes?.ok) return err(503, "Scene image unavailable. Please try again.");
         const reference = new File([await refRes.arrayBuffer()], "reference.jpg", { type: "image/jpeg" });
 
-        const upstream = new FormData();
-        upstream.set("model", MODEL);
-        upstream.set("prompt", buildPrompt(scene, guestCount));
-        upstream.append("image[]", guest, "guest.jpg");
-        upstream.append("image[]", reference, "reference.jpg");
-        upstream.set("size", "1024x1536");
-        upstream.set("output_format", "jpeg");
+        const encode = async (file: File) => `data:${file.type};base64,${Buffer.from(await file.arrayBuffer()).toString("base64")}`;
+        const upstream = buildImageEditRequest(scene, guestCount, await encode(reference), await encode(guest));
 
         // One bounded retry for transient failures only (429/5xx).
         for (let attempt = 0; attempt < 2; attempt++) {
-          const res = await fetch("https://ai.gateway.lovable.dev/v1/images/edits", {
+          const res = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
             method: "POST",
-            headers: { Authorization: `Bearer ${apiKey}`, "X-Lovable-AIG-SDK": "fetch" },
-            body: upstream,
+            headers: { Authorization: `Bearer ${apiKey}`, "X-Lovable-AIG-SDK": "fetch", "Content-Type": "application/json" },
+            body: JSON.stringify(upstream),
             signal: request.signal,
           });
           if (res.ok) {
             const json = (await res.json()) as { data?: { b64_json?: string }[] };
             const b64 = json.data?.[0]?.b64_json;
             if (!b64) return err(502, "The portrait model returned no image. Please try again.");
-            return Response.json({ imageBase64: b64, mimeType: "image/jpeg" });
+            return Response.json({ imageBase64: b64, mimeType: "image/png" });
           }
           const text = await res.text().catch(() => "");
           console.error("image edit failed", { status: res.status });

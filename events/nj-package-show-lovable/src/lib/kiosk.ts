@@ -74,33 +74,25 @@ export function expectedPeople(scene: Scene, guests: number): number {
 export function buildPrompt(scene: Scene, guestCount: number): string {
   if (!isValidGuestCount(guestCount)) throw new Error("Choose 1–3 guests.");
   const n = guestCount;
-  const total = expectedPeople(scene, n);
+  const guests = n === 1 ? "guest" : "guests";
   const outfits = Array.from({ length: n }, (_, i) =>
-    `- ${positionLabel(i, n)} (position ${i + 1} from left in image 1): match ONLY the outfit already visible on this primary foreground guest. A visible dress or skirt becomes ${scene.gown}. Visible separates, trousers or a suit become ${scene.tuxedo}. If the original outfit is ambiguous or cropped, use ${scene.tuxedo}.`
+    `- ${positionLabel(i, n)} (position ${i + 1} from left in image 2): match ONLY the outfit already visible. A visible dress or skirt becomes ${scene.gown}. Visible separates, trousers or a suit become ${scene.tuxedo}. If the original outfit is ambiguous or cropped, use ${scene.tuxedo}.`
   ).join("\n");
-  const lines = [
-    `Create a photorealistic luxury masquerade portrait.`,
-    `Image 1 is the SOURCE PHOTO. Use ONLY the ${n} primary foreground guest${n > 1 ? "s" : ""} (the ${n} largest, closest, camera-facing ${n > 1 ? "people" : "person"}). Ignore and exclude any background bystanders, passersby or partially visible people in image 1.`,
-    `Image 2 is the SCENE REFERENCE for composition, lighting, styling and setting only.`,
-    `Keep every guest from image 1 recognizably the same person: preserve each face, facial features, skin tone, hair and body proportions exactly. Keep them ordered left to right as in image 1.`,
-    `Automatic artistic formalwear styling, independently bound to each guest by position:`,
-    `Style visible clothing only. Do not infer, record, label or return gender identity or male/female classification. Do not choose outfits from faces, hair, body or presumed gender. No gender analysis or commentary.`,
+  return [
+    `Edit the supplied illustrated scene. Image 1 is the BASE ARTWORK and authoritative style/composition template. Image 2 is the camera IDENTITY/CLOTHING REFERENCE only, not output style or selfie crop.`,
+    `Edit ONLY the illustrated character regions of image 1. Retain the original background palette, architecture, flowers/candles, brand placement and visible bottle/label: ${scene.setting}. Do not redesign or reinterpret the environment or replace it with a generic ballroom. Camera identity and hairstyle belong only to the guest characters, never to the environment. Keep the main brand text correct.`,
+    `Replace its illustrated guest character(s) with drawn/painted versions of the ${n} primary foreground ${guests} in image 2 (the largest, closest, camera-facing people); exclude any background bystanders, passersby or partially visible people in image 2. Keep source guests ordered left to right.`,
+    `Keep the original artwork's face-rendering technique, drawn eyebrows/eyes/nose/mouth, simplified skin color shapes and illustrated hair exactly consistent throughout. Preserve recognizable identifying facial shapes, skin tone and hair without retaining photographic texture. The finished guest must look like a character painted by the artist of the template, not a photo composited into the scene.`,
+    `Use the original's polished editorial/fashion illustration finish: delicate dark drawn contours, smoothly blended painted skin shadows and highlights, richly shaded illustrated hair locks and elegant painted fabric folds. Avoid thick black outlines or flat vector/cel-shaded blocks; match the template artist's softly dimensional brush rendering while keeping every facial feature clearly drawn. Omit photographic pores and skin grain. Interpret identity through face silhouette, eye spacing, nose/lip shapes, skin tone and hairstyle. The drawing technique takes priority over literal photo fidelity; likeness survives as a painted character, not photographic realism.`,
+    `Within the guest characters only, draw each source guest's distinctive facial outline, eye spacing, nose/lip shapes and beard outline in the reference's soft painted treatment rather than substituting a generic idealized fashion-model face. Keep their actual hairstyle silhouette and arrangement: tied-up hair stays tied up, with the same bun/topknot location and volume; do not invent loose shoulder-length hair. Recognizable artist-translated likeness is the goal, not pixel-identical photographic geometry.`,
+    `Match image 1's smoothly painted shading, illustrated contours, elegant fashion rendering, original fashion framing and natural head proportions. Make sensible room within that framing for the exact requested guest count without redesigning the setting. Preserve bottle/branding artwork and placement; hand-painted detail variation is acceptable, a different brand or palette is not. Prevent exaggerated caricature heads and plastic 3D rendering.`,
+    `Style visible clothing only. Do not infer, record, label or return gender identity or male/female classification. Do not choose outfits from faces, hair, body or presumed gender.`,
     outfits,
-    `Each guest holds a delicate masquerade mask on a stick beside or below the face (never covering the eyes) so their face stays clearly recognizable.`,
-    `Setting: ${scene.setting}. Preserve the brand logo and bottle artwork exactly as shown in the reference; do not invent or misspell text.`,
-  ];
-  if (scene.withMariah) {
-    lines.push(
-      `Keep the recognizable Mariah Carey from the LEFT side of image 2 on the LEFT of the portrait. Replace the woman on the RIGHT of image 2 with the guest${n > 1 ? "s" : ""} from image 1.`,
-      `The final image contains exactly ${total} people: exactly one Mariah Carey plus the ${n} guest${n > 1 ? "s" : ""}. No other celebrities, do not keep the reference woman from the right of image 2.`,
-    );
-  } else {
-    lines.push(
-      `The final image contains exactly ${total} ${total === 1 ? "person" : "people"}: only the guest${n > 1 ? "s" : ""} from image 1. Do NOT copy the people from image 2 and do not add partners or extra people.`,
-    );
-  }
-  lines.push(`Never casual clothing. Tall portrait framing, elegant cinematic lighting.`);
-  return lines.join("\n");
+    `Each guest holds a delicate masquerade mask on a stick beside or below the face (never covering the eyes).`,
+    scene.withMariah
+      ? `Keep exactly one recognizable Mariah Carey from the LEFT side of image 1 on the LEFT. Replace the woman on the RIGHT of image 1 with the ${n} ${guests} from image 2, in the same reference facial and fashion treatment. The final image contains exactly ${expectedPeople(scene, n)} people: exactly one Mariah Carey plus the ${n} ${guests}. Remove the original right-hand guest; no other celebrities or people.`
+      : `Replace all original people in image 1. The final image contains exactly ${n} ${n === 1 ? "person" : "people"}: only the ${guests} from image 2. Do not keep original template people or add partners or extra people.`,
+  ].join("\n");
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
