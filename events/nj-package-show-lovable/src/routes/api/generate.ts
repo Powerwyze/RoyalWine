@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { buildPrompt, getScene, isValidWardrobes } from "@/lib/kiosk";
+import { buildPrompt, getScene, parseGuestCount } from "@/lib/kiosk";
 import { clientKey, rateLimited } from "@/lib/rate-limit.server";
 import blackIrishRef from "@/assets/black-irish-masquerade.jpg.asset.json";
 import mexxoRef from "@/assets/mexxo-masquerade.jpg.asset.json";
@@ -31,28 +31,26 @@ export const Route = createFileRoute("/api/generate")({
         try {
           form = await request.formData();
         } catch {
-          return err(400, "Invalid upload.");
+          return err(400, "Invalid camera photo.");
         }
         const scene = getScene(String(form.get("scene") ?? ""));
-        let wardrobes: unknown;
-        try {
-          wardrobes = JSON.parse(String(form.get("wardrobes") ?? ""));
-        } catch {
-          wardrobes = null;
-        }
+        const guestCount = parseGuestCount(form.get("guestCount"));
+        // Legacy wardrobes fields are intentionally ignored: visible clothing alone controls styling.
         const guest = form.get("guest");
         if (!scene) return err(400, "Unknown scene.");
-        if (!isValidWardrobes(wardrobes)) return err(400, "Choose 1–3 guests with wardrobe.");
+        if (guestCount === undefined) return err(400, "Choose 1–3 guests.");
         if (!(guest instanceof File)) return err(400, "A photo is required.");
         if (guest.size === 0 || guest.size > MAX_BYTES || !/^image\/(jpeg|png|webp)$/.test(guest.type))
           return err(400, "Photo must be JPEG/PNG/WebP under 8 MB.");
-        const refRes = await fetch(new URL(REFERENCE_URL[scene.id]!, request.url)).catch(() => null);
+        const referenceUrl = REFERENCE_URL[scene.id];
+        if (!referenceUrl) return err(503, "Scene image unavailable.");
+        const refRes = await fetch(new URL(referenceUrl, request.url)).catch(() => null);
         if (!refRes?.ok) return err(503, "Scene image unavailable. Please try again.");
         const reference = new File([await refRes.arrayBuffer()], "reference.jpg", { type: "image/jpeg" });
 
         const upstream = new FormData();
         upstream.set("model", MODEL);
-        upstream.set("prompt", buildPrompt(scene, wardrobes));
+        upstream.set("prompt", buildPrompt(scene, guestCount));
         upstream.append("image[]", guest, "guest.jpg");
         upstream.append("image[]", reference, "reference.jpg");
         upstream.set("size", "1024x1536");

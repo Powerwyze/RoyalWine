@@ -1,6 +1,5 @@
-// Pure, client-safe kiosk rules: scenes, wardrobe and prompt building.
+// Pure, client-safe kiosk rules: scenes, guest counts and automatic outfit prompt building.
 export type SceneId = "black-irish" | "mexxo" | "mariah";
-export type Wardrobe = "tuxedo" | "gown";
 
 export interface Scene {
   id: SceneId;
@@ -28,7 +27,7 @@ export const SCENES: Scene[] = [
     title: "MEXXO Masquerade",
     subtitle: "Teal, red & gold feathers",
     gown: "an elegant teal floor-length evening gown like the reference",
-    tuxedo: "a classic black tuxedo with bow tie like the reference",
+    tuxedo: "a classic black tuxedo with crisp white shirt and black bow tie like the reference",
     setting:
       "the cream, gold and teal MEXXO masquerade setting from the reference image, with the MEXXO bottle and branding",
     withMariah: false,
@@ -38,7 +37,7 @@ export const SCENES: Scene[] = [
     title: "With Mariah Carey",
     subtitle: "AI masquerade portrait",
     gown: "an elegant burgundy or emerald floor-length evening gown",
-    tuxedo: "a classic black tuxedo with bow tie",
+    tuxedo: "a classic black tuxedo with crisp white shirt and black bow tie",
     setting: "an opulent emerald, gold and burgundy chandelier ballroom like the reference image",
     withMariah: true,
   },
@@ -57,13 +56,14 @@ export function positionLabel(index: number, count: number): string {
   return `the ${POSITIONS[index]} guest`;
 }
 
-export function isValidWardrobes(w: unknown): w is Wardrobe[] {
-  return (
-    Array.isArray(w) &&
-    w.length >= 1 &&
-    w.length <= MAX_GUESTS &&
-    w.every((x) => x === "tuxedo" || x === "gown")
-  );
+/** Only numeric integer guest counts are accepted by the styling rules. */
+export function isValidGuestCount(n: unknown): n is number {
+  return typeof n === "number" && Number.isInteger(n) && n >= 1 && n <= MAX_GUESTS;
+}
+
+/** Multipart counts must be exactly 1, 2 or 3; missing and legacy wardrobe-only requests fail. */
+export function parseGuestCount(value: unknown): number | undefined {
+  return typeof value === "string" && /^[1-3]$/.test(value) ? Number(value) : undefined;
 }
 
 /** Total people expected in the final portrait. */
@@ -71,18 +71,20 @@ export function expectedPeople(scene: Scene, guests: number): number {
   return guests + (scene.withMariah ? 1 : 0);
 }
 
-export function buildPrompt(scene: Scene, wardrobes: Wardrobe[]): string {
-  const n = wardrobes.length;
+export function buildPrompt(scene: Scene, guestCount: number): string {
+  if (!isValidGuestCount(guestCount)) throw new Error("Choose 1–3 guests.");
+  const n = guestCount;
   const total = expectedPeople(scene, n);
-  const outfits = wardrobes
-    .map((w, i) => `- ${positionLabel(i, n)} (position ${i + 1} from left in image 1) wears ${w === "gown" ? scene.gown : scene.tuxedo}.`)
-    .join("\n");
+  const outfits = Array.from({ length: n }, (_, i) =>
+    `- ${positionLabel(i, n)} (position ${i + 1} from left in image 1): match ONLY the outfit already visible on this primary foreground guest. A visible dress or skirt becomes ${scene.gown}. Visible separates, trousers or a suit become ${scene.tuxedo}. If the original outfit is ambiguous or cropped, use ${scene.tuxedo}.`
+  ).join("\n");
   const lines = [
     `Create a photorealistic luxury masquerade portrait.`,
     `Image 1 is the SOURCE PHOTO. Use ONLY the ${n} primary foreground guest${n > 1 ? "s" : ""} (the ${n} largest, closest, camera-facing ${n > 1 ? "people" : "person"}). Ignore and exclude any background bystanders, passersby or partially visible people in image 1.`,
     `Image 2 is the SCENE REFERENCE for composition, lighting, styling and setting only.`,
     `Keep every guest from image 1 recognizably the same person: preserve each face, facial features, skin tone, hair and body proportions exactly. Keep them ordered left to right as in image 1.`,
-    `Wardrobe, bound to each guest by position:`,
+    `Automatic artistic formalwear styling, independently bound to each guest by position:`,
+    `Style visible clothing only. Do not infer, record, label or return gender identity or male/female classification. Do not choose outfits from faces, hair, body or presumed gender. No gender analysis or commentary.`,
     outfits,
     `Each guest holds a delicate masquerade mask on a stick beside or below the face (never covering the eyes) so their face stays clearly recognizable.`,
     `Setting: ${scene.setting}. Preserve the brand logo and bottle artwork exactly as shown in the reference; do not invent or misspell text.`,

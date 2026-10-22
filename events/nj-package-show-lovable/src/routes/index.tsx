@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, Download, Loader2, Mail, RefreshCw, Upload, Check, X } from "lucide-react";
+import { Camera, Download, Loader2, Mail, RefreshCw, Check, X } from "lucide-react";
 import blackIrishImg from "@/assets/black-irish-masquerade.jpg.asset.json";
 import mexxoImg from "@/assets/mexxo-masquerade.jpg.asset.json";
 import mariahImg from "@/assets/mariah-carey-masquerade.jpg.asset.json";
 import logoImg from "@/assets/black-irish-logo.jpg.asset.json";
-import { SCENES, cleanName, isValidEmail, isValidName, positionLabel, type SceneId, type Wardrobe } from "@/lib/kiosk";
+import { SCENES, cleanName, isValidEmail, isValidName, type SceneId } from "@/lib/kiosk";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -51,7 +51,9 @@ function drawScaled(src: CanvasImageSource, w: number, h: number, max = 1536) {
   const c = document.createElement("canvas");
   c.width = Math.round(w * s);
   c.height = Math.round(h * s);
-  c.getContext("2d")!.drawImage(src, 0, 0, c.width, c.height);
+  const ctx = c.getContext("2d");
+  if (!ctx) throw new Error("Canvas is unavailable");
+  ctx.drawImage(src, 0, 0, c.width, c.height);
   return c;
 }
 
@@ -61,7 +63,8 @@ async function composite(b64: string, scene: SceneId) {
   const c = document.createElement("canvas");
   c.width = img.naturalWidth;
   c.height = img.naturalHeight;
-  const ctx = c.getContext("2d")!;
+  const ctx = c.getContext("2d");
+  if (!ctx) throw new Error("Canvas is unavailable");
   ctx.drawImage(img, 0, 0);
   const pad = Math.round(c.width * 0.03);
   if (scene === "black-irish") {
@@ -98,7 +101,7 @@ function Kiosk() {
   const [phase, setPhase] = useState<Phase>("home");
   const [scene, setScene] = useState<SceneId>("black-irish");
   const [count, setCount] = useState(1);
-  const [wardrobes, setWardrobes] = useState<(Wardrobe | null)[]>([null]);
+  const [frameReady, setFrameReady] = useState(false);
   const [cam, setCam] = useState<CamState>("idle");
   const [countdown, setCountdown] = useState(5);
   const [source, setSource] = useState<{ blob: Blob; url: string } | null>(null);
@@ -113,9 +116,8 @@ function Kiosk() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const sessionRef = useRef(0); // bumps on Finish / Start over
-  const mediaOpRef = useRef(0); // bumps whenever a pending camera/upload/capture is superseded
+  const mediaOpRef = useRef(0); // bumps whenever a pending camera/capture is superseded
   const genRef = useRef(0); // bumps on each generation request
   const queuedGenRef = useRef(-1); // generation the "Send when ready" confirmation belongs to
   const outputRef = useRef<typeof output>(null);
@@ -127,24 +129,19 @@ function Kiosk() {
   const sourceUrlRef = useRef<string | null>(null);
   outputRef.current = output;
 
-  const setGuestCount = (n: number) => {
-    setCount(n);
-    setWardrobes((w) => Array.from({ length: n }, (_, i) => w[i] ?? null));
-  };
-  const wardrobeReady = wardrobes.length === count && wardrobes.every(Boolean);
-
   const clearTimer = () => {
     if (timerRef.current) window.clearInterval(timerRef.current);
     timerRef.current = null;
   };
 
-  /** Stops the camera and invalidates any pending getUserMedia/upload/capture. */
+  /** Stops the camera and invalidates any pending getUserMedia/capture. */
   const stopMedia = useCallback(() => {
     mediaOpRef.current += 1;
     clearTimer();
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
+    setFrameReady(false);
     setCam("idle");
   }, []);
 
@@ -168,6 +165,14 @@ function Kiosk() {
         return;
       }
       streamRef.current = s;
+      for (const track of s.getVideoTracks()) {
+        track.addEventListener("ended", () => {
+          if (streamRef.current !== s) return;
+          stopMedia();
+          setCam("unavailable");
+          setPhase("camera");
+        }, { once: true });
+      }
       setCam("live");
     } catch (e) {
       if (op !== mediaOpRef.current) return;
@@ -203,7 +208,7 @@ function Kiosk() {
     const op = mediaOpRef.current;
     const v = videoRef.current;
     try {
-      if (!v || !v.videoWidth) throw new Error("no frame");
+      if (cam !== "live" || !frameReady || !v || !v.videoWidth || !streamRef.current?.getVideoTracks().some((t) => t.readyState === "live")) throw new Error("no frame");
       const c = drawScaled(v, v.videoWidth, v.videoHeight); // unmirrored full frame
       const blob = await canvasToBlob(c);
       if (op !== mediaOpRef.current) return;
@@ -212,13 +217,13 @@ function Kiosk() {
       setPhase("review");
     } catch {
       if (op !== mediaOpRef.current) return;
-      setNotice("The photo couldn't be captured. Please try again or upload a photo.");
+      setNotice("The photo couldn't be captured. Retry the camera, or start over.");
       setPhase("camera");
     }
   };
 
   const startCountdown = () => {
-    if (timerRef.current) return;
+    if (timerRef.current || cam !== "live" || !frameReady || !streamRef.current?.getVideoTracks().some((t) => t.readyState === "live")) return;
     setCountdown(5);
     setPhase("countdown");
     let n = 5;
@@ -232,34 +237,13 @@ function Kiosk() {
   };
 
   const cancelCountdown = () => {
+    mediaOpRef.current += 1; // discard a frame still encoding when the timer is cancelled
     clearTimer();
     setPhase("camera");
   };
 
-  const onUpload = async (f: File | undefined) => {
-    if (!f || !f.type.startsWith("image/")) return;
-    stopMedia();
-    const op = mediaOpRef.current;
-    let bmp: ImageBitmap | null = null;
-    try {
-      bmp = await createImageBitmap(f);
-      if (op !== mediaOpRef.current) return;
-      const c = drawScaled(bmp, bmp.width, bmp.height);
-      const blob = await canvasToBlob(c);
-      if (op !== mediaOpRef.current) return;
-      setSourceBlob(blob);
-      setNotice(null);
-      setPhase("review");
-    } catch {
-      if (op !== mediaOpRef.current) return;
-      setNotice("That photo couldn't be read. Try another image.");
-    } finally {
-      bmp?.close();
-    }
-  };
-
   const generate = async () => {
-    if (busyRef.current || !source || !wardrobeReady) return;
+    if (busyRef.current || !source) return;
     busyRef.current = true;
     const session = sessionRef.current;
     const gen = ++genRef.current;
@@ -272,7 +256,7 @@ function Kiosk() {
     try {
       const fd = new FormData();
       fd.set("scene", scene);
-      fd.set("wardrobes", JSON.stringify(wardrobes));
+      fd.set("guestCount", String(count));
       fd.set("guest", new File([source.blob], "guest.jpg", { type: "image/jpeg" }));
       const res = await fetch("/api/generate", { method: "POST", body: fd, signal: ctrl.signal });
       const json = await res.json().catch(() => ({}));
@@ -354,7 +338,6 @@ function Kiosk() {
     setMailError(null);
     setScene("black-irish");
     setCount(1);
-    setWardrobes([null]);
     setPhase("home");
   };
 
@@ -369,7 +352,8 @@ function Kiosk() {
 
   const busy = phase === "generating" && !genError;
   const showSetup = phase === "home" || phase === "review" || phase === "camera";
-  const sceneObj = SCENES.find((s) => s.id === scene)!;
+  const sceneObj = SCENES.find((s) => s.id === scene);
+  if (!sceneObj) return null;
 
   return (
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-[1080px] flex-col gap-2 px-3 pt-2 sm:gap-5 sm:px-6 sm:pt-5">
@@ -392,7 +376,7 @@ function Kiosk() {
             <Camera className="h-8 w-8 text-gold sm:h-12 sm:w-12" aria-hidden />
             <h2 className="text-2xl font-semibold text-ivory sm:text-5xl">Create your portrait</h2>
             <p className="max-w-md text-sm text-muted-foreground sm:text-lg">
-              Pick a scene, how many guests, and what each will wear. Then step into frame.
+              Choose your scene and number of guests. We'll style your formal portrait.
             </p>
           </div>
         )}
@@ -400,15 +384,15 @@ function Kiosk() {
         {(phase === "camera" || phase === "countdown") && (
           <>
             {cam === "live" && (
-              <video ref={videoRef} playsInline muted className="absolute inset-0 h-full w-full -scale-x-100 object-cover" />
+              <video ref={videoRef} onLoadedData={() => setFrameReady(true)} onEmptied={() => setFrameReady(false)} playsInline muted className="absolute inset-0 h-full w-full -scale-x-100 object-contain" />
             )}
             {cam === "starting" && <Loader2 className="h-10 w-10 animate-spin text-gold" aria-label="Starting camera" />}
             {(cam === "denied" || cam === "unavailable") && (
               <div className="flex max-w-sm flex-col items-center gap-3 p-4 text-center">
                 <p className="text-base text-ivory sm:text-lg">
                   {cam === "denied"
-                    ? "Camera access was blocked. Allow the camera and retry, or upload a photo."
-                    : "No camera is available on this device. You can upload a photo instead."}
+                    ? "Camera access was blocked. Allow camera access in your browser settings, then retry."
+                    : "No camera is available. Check that a camera is connected and not in use by another app, then retry."}
                 </p>
                 <button className="btn btn-outline" onClick={startCamera}>
                   <RefreshCw className="h-5 w-5" /> Retry camera
@@ -472,7 +456,6 @@ function Kiosk() {
         )}
       </section>
 
-      <input ref={fileRef} type="file" accept="image/*" className="sr-only" tabIndex={-1} aria-label="Upload photo" onChange={(e) => { void onUpload(e.target.files?.[0]); e.target.value = ""; }} />
 
       {showSetup && (
         <section aria-label="Portrait options" className="flex flex-col gap-2 sm:gap-4">
@@ -491,33 +474,12 @@ function Kiosk() {
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <span className="eyebrow mr-1">Guests</span>
             {[1, 2, 3].map((n) => (
-              <button key={n} aria-pressed={count === n} aria-label={`${n} guest${n > 1 ? "s" : ""}`} className="chip min-w-[52px]" onClick={() => setGuestCount(n)}>
+              <button key={n} aria-pressed={count === n} aria-label={`${n} guest${n > 1 ? "s" : ""}`} className="chip min-w-[52px]" onClick={() => setCount(n)}>
                 {n}
               </button>
             ))}
           </div>
 
-          <div className={`grid gap-2 sm:gap-3 ${count === 3 ? "md:grid-cols-3" : count === 2 ? "sm:grid-cols-2" : ""}`}>
-            {wardrobes.map((w, i) => (
-              <div key={i} role="group" aria-label={`Wardrobe for ${positionLabel(i, count)}`} className="flex min-w-0 items-center justify-between gap-2 rounded-xl border border-border px-3 py-1.5">
-                <span className="min-w-0 truncate text-sm text-muted-foreground">
-                  {count === 1 ? "Guest wears" : `Guest ${i + 1} · ${i === 0 ? "left" : i === count - 1 ? "right" : "middle"}`}
-                </span>
-                <div className="flex shrink-0 gap-1.5">
-                  {(["tuxedo", "gown"] as const).map((opt) => (
-                    <button
-                      key={opt}
-                      aria-pressed={w === opt}
-                      className="chip px-3 text-sm"
-                      onClick={() => setWardrobes((arr) => arr.map((x, j) => (j === i ? opt : x)))}
-                    >
-                      {opt === "tuxedo" ? "Tuxedo" : "Gown"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
           {count > 1 && <p className="text-xs text-muted-foreground">Order guests left to right as they stand in the photo.</p>}
         </section>
       )}
@@ -528,20 +490,14 @@ function Kiosk() {
             <button className="btn btn-gold flex-1 text-base sm:max-w-[320px] sm:text-lg" onClick={startCamera}>
               <Camera className="h-5 w-5" /> Create your portrait
             </button>
-            <button className="btn btn-outline" onClick={() => fileRef.current?.click()}>
-              <Upload className="h-5 w-5" /> Upload
-            </button>
           </>
         )}
         {phase === "camera" && (
           <>
-            <button className="btn btn-gold flex-1 sm:max-w-[320px] sm:text-lg" disabled={cam !== "live"} onClick={startCountdown}>
+            {(cam === "live" || cam === "starting") && <button className="btn btn-gold flex-1 sm:max-w-[320px] sm:text-lg" disabled={cam !== "live" || !frameReady} onClick={startCountdown}>
               I'm ready — 5s timer
-            </button>
-            <button className="btn btn-outline" onClick={() => fileRef.current?.click()}>
-              <Upload className="h-5 w-5" /> Upload
-            </button>
-            <button className="btn-quiet" onClick={() => { stopMedia(); setNotice(null); setPhase(source ? "review" : "home"); }}>Back</button>
+            </button>}
+            {cam !== "denied" && cam !== "unavailable" && <button className="btn-quiet" onClick={() => { stopMedia(); setNotice(null); setPhase(source ? "review" : "home"); }}>Back</button>}
           </>
         )}
         {phase === "countdown" && (
@@ -552,10 +508,9 @@ function Kiosk() {
             <button className="btn btn-outline" onClick={startCamera}>
               <RefreshCw className="h-5 w-5" /> Retake
             </button>
-            <button className="btn btn-gold flex-1 sm:max-w-[320px] sm:text-lg" disabled={!wardrobeReady || busy} onClick={() => { setAttempts(0); void generate(); }}>
+            <button className="btn btn-gold flex-1 sm:max-w-[320px] sm:text-lg" disabled={busy} onClick={() => { setAttempts(0); void generate(); }}>
               Create portrait
             </button>
-            {!wardrobeReady && <p className="w-full text-center text-sm text-gold">Choose Tuxedo or Gown for each guest.</p>}
           </>
         )}
         {phase === "result" && output && (

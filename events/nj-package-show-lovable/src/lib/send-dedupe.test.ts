@@ -56,6 +56,8 @@ describe("name rule (contactVersion 1)", () => {
 
 describe("foreground-only prompt", () => {
   it("excludes background bystanders", () => {
-    expect(buildPrompt(getScene("black-irish")!, ["tuxedo"])).toContain("exclude any background bystanders");
+    const s = getScene("black-irish");
+    if (!s) throw new Error("Missing scene");
+    expect(buildPrompt(s, 1)).toContain("exclude any background bystanders");
   });
 });
