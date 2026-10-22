@@ -41,7 +41,7 @@ try{
   await requestedPromise;assert.ok(Date.now()-captured>=4800);assert.equal(genCalls,1);
   await page.locator('#emailInput').fill('royal-layout@example.com');
   assert.ok(await page.locator('#emailConfirm').isDisabled());
-  await page.locator('#guestNameInput').fill('Test Guest');
+  await page.locator('#guestNameInput').fill('Test Guest');await page.keyboard.press('Escape');assert.ok(await page.locator('#emailPanel').isVisible());
   if(i===3)await page.screenshot({path:'/tmp/royal-evidence/contact-mobile.png',fullPage:true});
   if(i===0)await page.screenshot({path:'/tmp/royal-evidence/contact-portrait.png',fullPage:true});
   if(i===2){

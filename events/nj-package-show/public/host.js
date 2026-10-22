@@ -379,9 +379,9 @@ document.addEventListener('pointerdown',touch);
 document.addEventListener('keydown',touch);
 document.addEventListener('keydown',e=>{
   if(!$('emailPanel').hidden){
-    if(e.key==='Escape'){e.preventDefault();if(photoEmail.status!=='sending')$('emailCancel').click();}
+    if(e.key==='Escape'){e.preventDefault();}
     if(e.key==='Tab'){
-      const enabled=[...$('emailPanel').querySelectorAll('button:not(:disabled),input:not(:disabled)')];
+      const enabled=[...$('emailPanel').querySelectorAll('button:not(:disabled):not([hidden]),input:not(:disabled)')];
       const first=enabled[0],last=enabled.at(-1);
       if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}
       else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}
