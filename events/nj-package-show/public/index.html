@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#152b27">
+<meta name="theme-color" content="#0a1d3c">
 <title>Royal Wine · NJ Package Show</title>
 <link rel="stylesheet" href="/host.css">
 <script type="importmap">{"imports":{"three":"/vendor/three/three.module.min.js","three/addons/":"/vendor/three/addons/"}}</script>
@@ -10,11 +10,11 @@
 <body data-phase="idle" data-configuration="checking">
 <main id="stage" aria-label="Royal Wine voice photo experience">
   <div class="ambient" aria-hidden="true"></div>
-  <header id="intro"><div class="brand-lockup"><img class="brand-logo" src="/assets/royal-wine-logo.png" alt="Kedem"><img class="partner-logo" src="/assets/bartenura-logo.jpg" alt="Bartenura"><img class="partner-logo" src="/assets/black-irish-logo.png" alt="Black Irish"></div><span class="eyebrow">ROYAL WINE · NJ PACKAGE SHOW</span><h1 class="event-title">Great connections.<br>A royal portrait.</h1><p class="event-meta">Bartenura · Black Irish · October 28, 2026</p></header>
+  <header id="intro"><div class="brand-lockup"><img class="brand-logo" src="/assets/royal-wine-logo.png" alt="Kedem"><img class="partner-logo" src="/assets/bartenura-logo.jpg" alt="Bartenura"><img class="partner-logo" src="/assets/black-irish-logo.png" alt="Black Irish"></div><span class="eyebrow">ROYAL WINE · NJ PACKAGE SHOW</span><h1 class="event-title">Your royal portrait.</h1><p class="event-meta">Bartenura · Black Irish · October 28, 2026</p></header>
   <img id="picture" alt="Your Royal Wine New Jersey portrait" hidden>
-  <section id="hostCaptions" aria-label="Blue’s live captions" hidden>
+  <section id="hostCaptions" aria-label="Blue’s live captions">
     <span class="caption-speaker">Blue · Royal Wine AI guide</span>
-    <p id="hostCaptionText"></p>
+    <p id="hostCaptionText">Ready for your royal portrait? Choose your look and tap Start my photo.</p>
   </section>
   <button id="face" type="button" disabled aria-label="Blue is getting ready">
     <canvas id="avatar" aria-label="Animated Bartenura bottle guide with Black Irish product display"></canvas>
@@ -30,24 +30,32 @@
 </svg>
   </button>
   <div id="message" role="status" aria-live="polite"><p id="headline">Blue is getting ready.</p><p id="hint">Checking availability…</p></div>
-  <button id="emailOpen" hidden>Email my photo</button>
+  <section id="touchControls" aria-labelledby="touchTitle"></section>
+<button id="useTouch" type="button" hidden>Use touch controls</button>
+<button id="emailOpen" hidden>Email my photo</button>
   <div id="emailToast" role="status" hidden>Photo accepted for delivery.</div>
   <section id="emailPanel" role="dialog" aria-modal="true" aria-labelledby="emailTitle" hidden>
-    <div class="email-heading"><div><span class="eyebrow">YOUR EVENT MOMENT, TO GO</span><h1 id="emailTitle">Did I get that right?</h1></div><button id="emailCancel" type="button" aria-label="Skip email">Skip</button></div>
-    <p id="emailHelp">Check your spelled email. Tap the address to move the cursor, then use the keyboard to correct it.</p>
+    <div class="email-heading"><div><span class="eyebrow">YOUR EVENT MOMENT, TO GO</span><h1 id="emailTitle">Your image is generating…</h1></div><button id="emailCancel" type="button" hidden aria-label="Close contact form">Back</button></div>
+    <p id="emailHelp">Enter your email and name now. Confirm and we’ll send your photo when it is ready.</p>
     <label for="emailInput">Email address</label>
-    <input id="emailInput" type="text" inputmode="none" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" maxlength="254" aria-describedby="emailHelp emailStatus">
-    <p id="emailStatus" role="status"></p>
+    <input id="emailInput" required type="text" inputmode="none" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" maxlength="254" aria-describedby="emailHelp emailStatus">
+    <label for="guestNameInput">Your name</label><input id="guestNameInput" required type="text" inputmode="none" autocomplete="off" maxlength="120" aria-describedby="emailHelp emailStatus">
+<p id="emailStatus" role="status"></p>
+<button id="contactKeyboardToggle" type="button">Hide touch keyboard</button>
     <div id="emailKeyboard" aria-label="Email keyboard"></div>
     <div id="emailDomains" aria-label="Common email endings"></div>
     <button id="emailConfirm" type="button" disabled>Confirm &amp; email photo</button>
-    <p class="email-note">Send this photo to the address you confirm.</p>
+    <p class="email-note">We use these details to deliver your photo. <a href="https://royalwine.com/privacy-policy/" target="_blank" rel="noopener noreferrer">Privacy policy</a>.</p>
   </section>
-  <aside id="viewfinder" aria-label="Live camera preview during countdown" hidden>
-    <video id="camera" autoplay playsinline muted aria-label="Your camera framing"></video>
-    <span>YOUR FRAME</span>
+  <aside id="viewfinder" aria-label="Live photo booth camera preview">
+    <h2>See yourself in a royal moment</h2>
+    <div class="camera-frame"><video id="camera" autoplay playsinline muted aria-label="Your camera framing"></video><button id="cameraEnable" type="button">Enable camera preview</button><div id="countdown" aria-live="assertive" hidden></div></div>
+    <span id="cameraStatus" role="status">YOUR FRAME · CAMERA PREVIEW</span>
   </aside>
-  <div id="countdown" aria-live="assertive" hidden></div>
+  <section id="photoThemes" aria-label="Choose your portrait theme"><p class="examples-title">CHOOSE YOUR ROYAL EXPERIENCE</p><div class="theme-grid">
+  <button class="theme-card" data-theme="gallery" aria-pressed="true"><img src="/assets/theme-gallery.svg" alt="" width="400" height="280"><span>Royal Gallery<small>Cobalt · cream · gold</small></span></button><button class="theme-card" data-theme="riviera" aria-pressed="false"><img src="/assets/theme-riviera.svg" alt="" width="400" height="280"><span>Italian Riviera<small>Sunlit Italian coast</small></span></button><button class="theme-card" data-theme="midnight" aria-pressed="false"><img src="/assets/theme-midnight.svg" alt="" width="400" height="280"><span>Emerald Evening<small>Velvet green · cinematic</small></span></button><button class="theme-card" data-theme="celebration" aria-pressed="false"><img src="/assets/theme-celebration.svg" alt="" width="400" height="280"><span>Golden Celebration<small>Your royal entrance</small></span></button>
+  </div><p class="examples-note">Illustrated settings · Your portrait will be unique</p></section>
+  <section id="homeExamples" aria-label="How your portrait transforms"><div><span>Your photo</span><img src="/assets/portrait-before.svg" alt="Illustration of a camera portrait" width="150" height="180"></div><span class="example-arrow" aria-hidden="true">→</span><div><span>Your royal moment</span><img src="/assets/portrait-after.svg" alt="Illustration of a portrait in the Royal Gallery setting" width="150" height="180"></div></section>
   <a id="setupLink" href="/setup" hidden>Operator setup</a>
   <button id="sentryToggle" type="button" disabled aria-pressed="false">Enable camera sentry</button>
   <p id="sentryNotice" role="status" hidden></p>

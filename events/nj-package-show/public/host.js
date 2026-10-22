@@ -1,5 +1,7 @@
+import {themeLabels} from './photo-themes.js';
+import {mountTouchControls} from './host-touch.js';
 import { BoothEngine,LiveTools } from './host-engine.js';
-import {PhotoEmail,validEmail} from './host-email.js';
+import {PhotoEmail,validEmail,validName} from './host-email.js';
 import {CameraSentry} from './host-sentry.js';
 import {runCountdown} from './host-countdown.js';
 import {GuestIdle} from './host-idle.js';
@@ -9,6 +11,7 @@ import('./host-avatar.js').then(m=>m.mountAvatar(document.getElementById('face')
 const $=id=>document.getElementById(id);
 const face=$('face'),camera=$('camera'),audio=$('voice'),picture=$('picture');
 const captions=new HostCaptions($('hostCaptions'),$('hostCaptionText'),$('stage'),face);
+let touchMode=false,touchUI=null,pageLeaving=false,voiceConfigured=false,activeContactInput=null;
 let configured=false,configurationHint="Checking availability…";
 let cameraPreparation=null,cameraEpoch=0;
 let peer,events,mic,cameraStream,context,analyser,sourceNode,ready=false,connecting=false,ending=false;
@@ -19,13 +22,13 @@ const wait=(ms,signal)=>new Promise((resolve,reject)=>{
   const timer=setTimeout(()=>{signal?.removeEventListener('abort',abort);resolve();},ms);
   signal?.addEventListener('abort',abort,{once:true});
 });
-function text(title,hint=''){ $('headline').textContent=configured?title:'Blue is getting ready.';$('hint').textContent=configured?hint:configurationHint; }
-function phase(value){if(document.body.dataset.phase!==value)captions.clear();document.body.dataset.phase=value;$('sentryToggle').disabled=!configured||!sentry.enabled&&!['idle','error'].includes(value);}
+function text(title,hint=''){ $('headline').textContent=configured?title:'Blue is getting ready.';$('hint').textContent=configured?hint:configurationHint; if(!captions.buffer){$('hostCaptionText').textContent=configured?title+' '+hint:configurationHint;$('hostCaptions').hidden=false;} }
+function phase(value){if(document.body.dataset.phase!==value)captions.clear();document.body.dataset.phase=value;$('viewfinder').hidden=!['idle','connecting','listening','preparing','countdown','error'].includes(value);$('sentryToggle').disabled=!voiceConfigured||!sentry.enabled&&!['idle','error'].includes(value);queueMicrotask(()=>touchUI?.render());}
 function send(event){if(!ready||events?.readyState!=='open'||(ending&&event.type!=='session.close'))return;events.send(JSON.stringify({event_id:crypto.randomUUID(),...event}));}
 function note(content,speak=false){send({type:speak?'session.commentary.append':'session.thinking.append',delegation_id:null,content});}
 const sentry=new CameraSentry({
   video:$('sentryCamera'),
-  canGreet:()=>configured&&!ready&&!connecting&&!ending&&!document.hidden,
+  canGreet:()=>voiceConfigured&&!touchMode&&!ready&&!connecting&&!ending&&!document.hidden,
   onVisitor:greeting=>begin({sentryGreeting:greeting}),
   onStatus:(status,message='')=>{
     $('sentryToggle').textContent=status==='off'?'Enable camera sentry':status==='starting'?'Stop sentry setup':'Stop camera sentry';
@@ -44,7 +47,7 @@ function stopSentry(){
   sentrySetup++;sentryEnabling=false;sentry.disable();sentryAudioContext?.close().catch(()=>{});sentryAudioContext=null;
 }
 $('sentryToggle').addEventListener('click',async()=>{
-  if(!configured)return;
+  if(!voiceConfigured)return;
   if(sentry.enabled||sentryEnabling){stopSentry();if(ready||connecting)end();else text('Say hello to Blue.','Tap Blue to begin · AI photo host');return;}
   if(ready||connecting)return;
   const setup=++sentrySetup;sentryEnabling=true;
@@ -57,7 +60,7 @@ $('sentryToggle').addEventListener('click',async()=>{
     const permission=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
     permission.getTracks().forEach(t=>t.stop());
     if(setup!==sentrySetup)return;
-    await sentry.enable();
+    await sentry.enable();if(!cameraStream)void enableCamera();
   }catch(error){
     if(setup===sentrySetup){stopSentry();$('sentryToggle').textContent='Enable camera sentry';text('Camera sentry needs permission.',error.name==='NotAllowedError'?'Allow microphone and camera access, then enable sentry again.':'Tap Enable camera sentry to try again.');}
   }finally{if(setup===sentrySetup)sentryEnabling=false;}
@@ -65,7 +68,7 @@ $('sentryToggle').addEventListener('click',async()=>{
 function stopEventTalk(){clearInterval(eventTimer);eventTimer=null;}
 function startEventTalk(){
   stopEventTalk();eventIndex=0;guestInterrupted=false;
-  note('The photo is generating for NJ Package Show. First ask one engaging question about Bartenura wine styles, Black Irish cream flavors, or what their customers are looking for. Listen, connect the answer to one relevant verified Bartenura or Black Irish fact, then ask a short follow-up. Do not deliver the fact before the opening question. Do not ask for email yet. Do not invent event details.',true);
+  note('The photo is generating for NJ Package Show. First ask one engaging question about Bartenura wine styles, Black Irish cream flavors, or what their customers are looking for. Listen, connect the answer to one relevant verified Bartenura or Black Irish fact, then ask a short follow-up. Do not deliver the fact before the opening question. The contact form is visible now; invite the guest to enter email and name and confirm while generation continues. Do not invent event details.',true);
   eventTimer=setInterval(()=>{
     if(!ready||engine.phase!=='generating'){stopEventTalk();return;}
     if(guestInterrupted||Date.now()-lastVoiceAt<18000||eventIndex>=2)return;
@@ -73,45 +76,50 @@ function startEventTalk(){
     note('The image is still generating. Briefly talk about '+topic+' using only your supplied event facts. Leave room for questions and skip this prompt if the guest prefers quiet. Do not repeat yourself or promise timing.',true);
   },30000);
 }
-const photoEmail=new PhotoEmail({
-  deliver:async({email,image,signal})=>{
+let photoEmail;
+photoEmail=new PhotoEmail({
+  deliver:async({email,name,image,signal})=>{
     const base64=await new Promise((resolve,reject)=>{
       const reader=new FileReader();reader.onload=()=>resolve(reader.result.split(',')[1]);reader.onerror=()=>reject(new Error('Image could not be prepared.'));reader.readAsDataURL(image);
     });
     if(signal.aborted)throw new DOMException('Cancelled','AbortError');
-    const response=await fetch('/api/send-photo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,imageBase64:base64,mimeType:image.type,filename:'royal-wine-nj-portrait.jpg'}),signal:AbortSignal.any([signal,AbortSignal.timeout(30000)])});
+    const response=await fetch('/api/send-photo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,name,contactVersion:1,imageBase64:base64,mimeType:image.type,filename:'royal-wine-nj-portrait.jpg'}),signal:AbortSignal.any([signal,AbortSignal.timeout(30000)])});
     const result=await response.json().catch(()=>({}));
     if(!response.ok||!result.ok)throw new Error('Delivery was not confirmed.');
   },
   onChange:state=>{
+    if(!photoEmail)return;
     syncIdle();
-    const open=['review','sending','error'].includes(state.status);
+    const open=['review','sending','error'].includes(state.status)&&!state.queued;
     $('emailPanel').hidden=!open;document.body.dataset.emailOpen=String(open);
     captions.placeIn(open?$('emailPanel'):null);
     const sending=state.status==='sending';
-    $('emailInput').disabled=sending;
+    $('emailInput').disabled=sending;$('guestNameInput').disabled=sending;
     $('emailCancel').disabled=sending;
     document.querySelectorAll('#emailKeyboard button,#emailDomains button').forEach(b=>b.disabled=sending);
-    $('emailConfirm').disabled=sending||!validEmail($('emailInput').value);
-    $('emailConfirm').textContent=sending?'Sending your photo…':'Confirm & email photo';
+    $('emailConfirm').disabled=sending||!validEmail(photoEmail.draft)||!validName(photoEmail.name);
+    $('emailConfirm').textContent=sending?'Sending your photo…':photoEmail.collecting?'Confirm & email when ready':'Confirm & email photo';
+    $('emailTitle').textContent=photoEmail.collecting?'Your image is generating…':'Your royal portrait, to go';
+    $('emailHelp').textContent=photoEmail.collecting?'Enter your email and name now. Confirm and we’ll send your photo when it is ready.':'Check your details, then tap Confirm & email photo.';
     $('emailStatus').textContent=state.error||(sending?'Sending to the address you confirmed.':'');
     $('emailToast').hidden=state.status!=='sent';
-    if(state.status==='sent')$('emailInput').value='';
+    if(state.status==='sent'){$('emailInput').value='';$('guestNameInput').value='';}
+    queueMicrotask(()=>touchUI?.render());
     $('emailOpen').hidden=!open&&state.status!=='sent'?$('picture').hidden:true;
   }
 });
 function reviewEmail(value){
   const result=photoEmail.review(value);
-  if(result.shown){$('emailInput').value=photoEmail.draft;$('emailConfirm').disabled=!validEmail(photoEmail.draft);$('emailInput').focus({preventScroll:true});}
+  if(result.shown){$('emailInput').value=photoEmail.draft;$('emailConfirm').disabled=!validEmail(photoEmail.draft)||!validName(photoEmail.name);$('emailInput').focus({preventScroll:true});}
   return result;
 }
-function clearEmail(){photoEmail.reset();$('emailInput').value='';$('emailOpen').hidden=true;$('emailToast').hidden=true;}
-function hideCountdown(){$('countdown').hidden=true;$('viewfinder').hidden=true;}
+function clearEmail(){photoEmail.reset();$('emailInput').value='';$('guestNameInput').value='';$('emailOpen').hidden=true;$('emailToast').hidden=true;}
+function hideCountdown(){$('countdown').hidden=true;}
 function stopCamera(){cameraEpoch++;cameraPreparation=null;cameraStream?.getTracks().forEach(t=>t.stop());cameraStream=null;camera.srcObject=null;hideCountdown();}
 function hidePicture(){picture.hidden=true;picture.removeAttribute('src');if(pictureUrl)URL.revokeObjectURL(pictureUrl);pictureUrl=null;}
 function touch(){guestIdle.touch();}
 function syncIdle(){
-  if(!ready||ending)return;
+  if((!ready&&!touchMode)||ending)return;
   guestIdle.setBusy(['preparing','countdown','generating'].includes(engine.phase)||photoEmail.status==='sending');
 }
 async function ensureCamera(signal){
@@ -121,7 +129,7 @@ async function ensureCamera(signal){
     cameraPreparation=(async()=>{
       const next=sentry.enabled&&sentry.stream?.getVideoTracks().some(t=>t.readyState==='live')?sentry.stream.clone():await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:false});
       if(epoch!==cameraEpoch||signal.aborted){next.getTracks().forEach(t=>t.stop());throw new DOMException('Cancelled','AbortError');}
-      cameraStream=next;camera.srcObject=next;await camera.play();
+      cameraStream=next;camera.srcObject=next;await camera.play();$('cameraStatus').textContent='YOUR LIVE FRAME';$('cameraEnable').hidden=true;
       for(let i=0;i<80&&(!camera.videoWidth||!camera.videoHeight||camera.readyState<2);i++){
         if(epoch!==cameraEpoch)throw new DOMException('Cancelled','AbortError');
         await wait(100,signal);
@@ -170,8 +178,8 @@ const engine=new BoothEngine({
       throw e;
     }finally{if(captureEpoch===cameraEpoch)stopCamera();}
   },
-  generate:async({source,count,style,signal})=>{
-    const form=new FormData();form.append('image',source,'guest-photo.jpg');form.append('guestCount',String(count));form.append('style',style);
+  generate:async({source,count,themeId,style,signal})=>{
+    const form=new FormData();form.append('image',source,'guest-photo.jpg');form.append('guestCount',String(count));form.append('style',style);form.append('themeId',themeId);
     const res=await fetch('/api/banana',{method:'POST',body:form,signal:AbortSignal.any([signal,AbortSignal.timeout(185000)])});
     if(!res.ok){
       const problem=await res.json().catch(()=>({}));
@@ -187,22 +195,25 @@ const engine=new BoothEngine({
   onChange:(state,image)=>{
     syncIdle();
     if(state.phase!=='generating')stopEventTalk();
-    photoEmail.setImage(state.phase==='result'?image:null);
-    if(state.phase!=='result'){$('emailInput').value='';$('emailOpen').hidden=true;}
+    if(state.phase==='preparing')clearEmail();
+    if(state.phase==='generating'&&lastPhase!=='generating'){if(photoEmail.draft)photoEmail.resumeGeneration();else photoEmail.beginGeneration();}
+    if(state.phase==='result')photoEmail.setImage(image);
+    if(state.phase==='error'&&photoEmail.collecting){photoEmail.collecting=false;photoEmail.queued=false;photoEmail.confirmed=false;photoEmail.status='empty';photoEmail.emit();}
+    if(state.phase!=='result')$('emailOpen').hidden=true;
     hidePicture();
     phase(state.phase);
     if(state.phase==='result'&&image){pictureUrl=URL.createObjectURL(image);picture.src=pictureUrl;picture.hidden=false;$('emailOpen').hidden=photoEmail.status==='sent'||!$('emailPanel').hidden;}
     if(state.phase==='preparing')text('Getting the camera ready.','Your countdown starts as soon as the camera is ready.');
-    else if(state.phase==='countdown')text('Look toward the camera.','Check your framing in the top-left preview.');
+    else if(state.phase==='countdown')text('Look toward the camera.','Keep everyone inside the camera frame.');
     else if(state.phase==='generating')text('Creating your royal portrait.','Your host is still here. Feel free to talk.');
     else if(state.phase==='error')text('Let’s try that again.',state.error);
     else if(state.phase==='listening')text('I’m listening.',state.guestCount?state.guestCount+' '+(state.guestCount===1?'person':'people')+' · Say when you’re ready.':'Tell me how many people are in your photo.');
     // Warm the camera while the host asks for readiness, keeping it out of view.
-    if(ready&&state.phase==='listening'&&state.guestCount&&requestController)ensureCamera(requestController.signal).catch(()=>{});
+    if((ready||touchMode)&&state.phase==='listening')void enableCamera();
     if(ready){
       note('Booth state: '+JSON.stringify(state));
       if(state.phase!==lastPhase){
-        if(state.phase==='result')note('The generated photo has passed the guest check, decoded successfully, and is now displayed. Stop the event explanation. Tell the visitor the photo is ready, then ask them to spell their email aloud, including at and dot, if they would like it emailed. Wait for the spelling before showing the confirmation keyboard.',true);
+        if(state.phase==='result')note('The generated photo has passed the guest check, decoded successfully, and is now displayed. Stop the event explanation. Tell the visitor the photo is ready, If contact is confirmed, say it is queued for delivery. Otherwise let them finish the visible email and name form; never discard or repeat their draft.',true);
         if(state.phase==='error')note('The photo workflow failed: '+state.error+' Do not retry unless the visitor asks.',true);
         if(state.phase==='countdown')send({type:'session.instructions.append',delegation_id:null,content:'The camera is ready and the visible five-second countdown has started now. Stay quiet until the app reports generating. Do not say or count any numbers; the app plays synchronized countdown sounds.'});
         if(state.phase==='generating')startEventTalk();
@@ -222,7 +233,7 @@ const toolLoop=new LiveTools({send,execute:async(name,args)=>{
   return engine.execute(name,args);
 }});
 function cleanup(message='Tap Blue to begin · AI photo host'){
-  sessionEpoch++;ready=false;connecting=false;ending=false;captions.clear();
+  sessionEpoch++;ready=false;connecting=false;ending=false;touchMode=false;captions.clear();
   guestIdle.stop();stopEventTalk();clearEmail();sentry.finish({immediate:rearmImmediately});rearmImmediately=false;
   requestController?.abort();requestController=null;
   clearTimeout(startTimer);clearTimeout(closeTimer);clearTimeout(maxTimer);
@@ -234,7 +245,7 @@ function cleanup(message='Tap Blue to begin · AI photo host'){
   toolLoop.clear();engine.reset();hidePicture();$('countdown').hidden=true;
   $('end').hidden=true;$('audioResume').hidden=true;
   face.setAttribute('aria-label','Start talking to your AI photo host');
-  phase('idle');text(sentry.enabled?'Looking good starts here.':'Say hello to Blue.',sentry.enabled?'Camera sentry is on · Walk into view to begin.':message);
+  phase('idle');if(!pageLeaving&&!document.hidden)void enableCamera();text(sentry.enabled?'Looking good starts here.':'Say hello to Blue.',sentry.enabled?'Camera sentry is on · Walk into view to begin.':message);
 }
 function end({idle=false}={}){
   if(ending)return;
@@ -251,7 +262,7 @@ async function ice(connection,signal){
   throw new Error('The voice connection could not reach the network. Tap Blue to retry.');
 }
 async function begin({sentryGreeting=null}={}){
-  if(!configured||connecting||ready||ending)return;
+  if(!voiceConfigured||connecting||ready||ending)return;
   sentry.consume();
   connecting=true;const epoch=++sessionEpoch;captions.clear();
   phase('connecting');text('Welcome. Make yourself at home.',sentryGreeting?'Your AI photo host is joining you.':'Allow your microphone to meet your host.');
@@ -278,7 +289,7 @@ async function begin({sentryGreeting=null}={}){
         if(sentryGreeting&&(!sentry.enabled||!sentry.gate.isFresh(performance.now()))){send({type:'session.close'});cleanup();return;}
         guestInterrupted=false;
         $('end').hidden=false;face.setAttribute('aria-label','Your AI photo host is listening');
-        phase('listening');text('I’m listening.',sentryGreeting?'Say hello, or ask for your photo.':'Tell me how many people are in your photo.');guestIdle.start(sentry.enabled?30000:150000);syncIdle();
+        phase(engine.phase);text('I’m listening.',sentryGreeting?'Say hello, or ask for your photo.':'Tell me how many people are in your photo.');guestIdle.start(sentry.enabled?30000:150000);syncIdle();
         maxTimer=setTimeout(end,600000);
         const greeting=crypto.randomUUID();
         const listener=({data})=>{
@@ -291,21 +302,21 @@ async function begin({sentryGreeting=null}={}){
         channel.addEventListener('message',listener);
         send({type:'session.instructions.append',event_id:greeting,delegation_id:null,content:sentryGreeting?'Speak first in English. Use this greeting based on the latest camera frame: '+JSON.stringify(sentryGreeting)+' Then listen. If they want a photo, ask how many people are posing and get explicit readiness before capture. Do not claim to see a live video feed.':'Speak first in English: welcome the visitor, identify yourself as an AI photo host, and ask whether one, two, or three people are posing. Then listen.'});
         note('Initial booth state: '+JSON.stringify(engine.snapshot()));
-      } else if(event.type==='session.closed'){cleanup();}
+      } else if(event.type==='session.closed'){if(ending)cleanup();else useTouch('Voice ended. Continue with the buttons.');}
       else if(event.type==='session.input_transcript.delta'){if(typeof event.delta==='string'&&event.delta.trim()){touch();guestInterrupted=true;lastVoiceAt=Date.now();captions.nextTurn();}}
       else if(event.type==='session.output_transcript.delta'){
         lastVoiceAt=Date.now();
         if(ready&&!ending&&!['idle','connecting','countdown'].includes(document.body.dataset.phase))captions.append(event.delta);
       }
       else if(event.type==='error'){
-        text('Your host needs a moment.','The connection had a problem. End and tap Blue to reconnect.');
+        useTouch('Voice is unavailable. Continue with the buttons.');
       } else {
         toolLoop.receive(event).catch(()=>text('Let’s try that again.','Please repeat your request.'));
       }
     });
-    channel.addEventListener('close',()=>{if(epoch===sessionEpoch&&!ending)cleanup('Connection ended. Tap Blue to reconnect.');});
+    channel.addEventListener('close',()=>{if(epoch===sessionEpoch&&!ending)useTouch('Voice disconnected. Your photo and details are saved for this visit.');});
     connection.addEventListener('connectionstatechange',()=>{
-      if(epoch===sessionEpoch&&connection.connectionState==='failed')cleanup('Connection lost. Tap Blue to reconnect.');
+      if(epoch===sessionEpoch&&connection.connectionState==='failed')useTouch('Voice disconnected. Continue with the buttons.');
     });
     await connection.setLocalDescription(await connection.createOffer());await ice(connection,requestController.signal);
     const response=await fetch('/api/host-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sdp:connection.localDescription.sdp}),signal:AbortSignal.any([requestController.signal,AbortSignal.timeout(30000)])});
@@ -313,11 +324,11 @@ async function begin({sentryGreeting=null}={}){
     if(!response.ok)throw new Error(result.error||'Your host could not connect.');
     if(epoch!==sessionEpoch)return;
     await connection.setRemoteDescription({type:'answer',sdp:result.transport.sdp});
-    if(!ready)startTimer=setTimeout(()=>{if(epoch===sessionEpoch&&!ready)cleanup('The host did not connect. Tap Blue to retry.');},20000);
+    if(!ready)startTimer=setTimeout(()=>{if(epoch===sessionEpoch&&!ready)useTouch('Voice did not connect. Continue with the buttons.');},20000);
   }catch(error){
     if(epoch!==sessionEpoch)return;
     const message=error.name==='NotAllowedError'?'Please allow microphone access, then tap Blue again.':error.message;
-    cleanup(message);phase('error');text('Let’s get connected.',message);
+    useTouch(error.name==='NotAllowedError'?'Microphone unavailable. You can complete your photo with the buttons.':message);
   }
 }
 face.addEventListener('click',()=>{if(!ready)begin();else if(audio.paused)audio.play().catch(()=>{$('audioResume').hidden=false;});});
@@ -327,27 +338,29 @@ $('emailOpen').addEventListener('click',()=>{
   touch();
   note('The visitor tapped Email my photo. Ask them to spell their email aloud, including at and dot. The keyboard is available if they prefer to type.',true);
   // Touch is a deliberate manual-entry fallback; normal voice flow opens after spelling.
-  reviewEmail('');
+  reviewEmail(photoEmail.draft);
 });
 $('emailCancel').addEventListener('click',()=>{photoEmail.cancel();$('emailInput').value='';$('emailOpen').hidden=false;note('The visitor skipped email. Do not ask for their email again unless they request it.');$('emailOpen').focus();});
+$('guestNameInput').addEventListener('input',()=>{photoEmail.editName($('guestNameInput').value);touch();});
+for(const id of ['emailInput','guestNameInput'])$(id).addEventListener('focus',()=>{activeContactInput=$(id);$('emailDomains').hidden=id!=='emailInput';});
 $('emailInput').addEventListener('input',()=>{photoEmail.edit($('emailInput').value);touch();});
 $('emailPanel').addEventListener('pointerdown',touch);
 $('emailPanel').addEventListener('keydown',touch);
 $('emailConfirm').addEventListener('click',async()=>{
-  touch();photoEmail.edit($('emailInput').value);
+  touch();photoEmail.edit($('emailInput').value);photoEmail.editName($('guestNameInput').value);
   const sent=await photoEmail.confirm();
   if(sent&&ready){note('Email service accepted the photo for delivery to the address the guest confirmed on screen. Thank them; suggest checking inbox or spam. Do not promise arrival.',true);face.focus();}
 });
-for(const row of ['1234567890','qwertyuiop','asdfghjkl','zxcvbnm','@._-+']){
+for(const row of ['1234567890','qwertyuiop','asdfghjkl','zxcvbnm','@._-+',' ']){
   const element=document.createElement('div');element.className='key-row';
   const keys=[...row];if(row==='@._-+')keys.push('left','right','backspace');
   for(const key of keys){
     const button=document.createElement('button');button.type='button';button.dataset.key=key;
-    button.textContent=({left:'←',right:'→',backspace:'⌫'})[key]||key;
+    button.textContent=key===' '?'Space':({left:'←',right:'→',backspace:'⌫'})[key]||key;
     button.setAttribute('aria-label',({left:'Move cursor left',right:'Move cursor right',backspace:'Delete previous character'})[key]||('Type '+key));
     button.addEventListener('pointerdown',e=>e.preventDefault());
     button.addEventListener('click',()=>{
-      const input=$('emailInput');if(input.disabled)return;
+      const input=activeContactInput||$('emailInput');if(input.disabled)return;
       let start=input.selectionStart??input.value.length,end=input.selectionEnd??start;
       if(key==='left'||key==='right'){const next=Math.max(0,Math.min(input.value.length,start+(key==='left'?-1:1)));input.setSelectionRange(next,next);}
       else {
@@ -366,16 +379,16 @@ document.addEventListener('pointerdown',touch);
 document.addEventListener('keydown',touch);
 document.addEventListener('keydown',e=>{
   if(!$('emailPanel').hidden){
-    if(e.key==='Escape'){e.preventDefault();if(photoEmail.status!=='sending')$('emailCancel').click();}
+    if(e.key==='Escape'){e.preventDefault();}
     if(e.key==='Tab'){
-      const enabled=[...$('emailPanel').querySelectorAll('button:not(:disabled),input:not(:disabled)')];
+      const enabled=[...$('emailPanel').querySelectorAll('button:not(:disabled):not([hidden]),input:not(:disabled)')];
       const first=enabled[0],last=enabled.at(-1);
       if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}
       else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}
     }
   }else if(e.key==='Escape')end();
 });
-window.addEventListener('pagehide',()=>{stopSentry();send({type:'session.close'});cleanup();});
+window.addEventListener('pagehide',()=>{pageLeaving=true;stopSentry();send({type:'session.close'});cleanup();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){stopSentry();end();}});
 const samples=new Uint8Array(256),frequencies=new Uint8Array(128);
 function animate(t){
@@ -396,20 +409,60 @@ function animate(t){
 }
 requestAnimationFrame(animate);
 
+
+async function enableCamera(){
+ if(pageLeaving||document.hidden)return;
+ try{await ensureCamera(new AbortController().signal);$('cameraStatus').textContent='YOUR LIVE FRAME';}
+ catch(error){$('cameraStatus').textContent='Camera permission is needed for your photo';$('cameraEnable').hidden=false;}
+}
+function useTouch(message='Continue with the buttons.'){
+ sessionEpoch++;ready=false;connecting=false;ending=false;touchMode=true;
+ clearTimeout(startTimer);clearTimeout(closeTimer);clearTimeout(maxTimer);
+ const ch=events;events=null;ch?.close();const pc=peer;peer=null;pc?.close();
+ mic?.getTracks().forEach(t=>t.stop());mic=null;
+ audio.pause();audio.srcObject=null;sourceNode?.disconnect();sourceNode=null;analyser=null;
+ if(context!==sentryAudioContext)context?.close().catch(()=>{});context=null;
+ toolLoop.clear();stopEventTalk();sentry.consume();guestIdle.start(150000);syncIdle();
+ $('end').hidden=false;phase(engine.phase);text('Your photo experience continues.',message);
+}
+function startManual(themeId){
+ cleanup();touchMode=true;sentry.consume();guestIdle.start(150000);
+ $('end').hidden=false;phase('listening');
+ if(themeId)void engine.execute('set_theme',{themeId});
+ text('Make this moment yours.','Choose how many people, then your portrait theme.');void enableCamera();touchUI?.render();
+}
+async function touchAction(name,args){
+ touch();if(photoEmail.status==='sending')return;
+ const result=await engine.execute(name,args);
+ if(result.error)text('One more step.',result.error);
+ if(ready)note('The guest used a touch control. Booth state: '+JSON.stringify(engine.snapshot()));
+ touchUI?.render();
+}
+touchUI=mountTouchControls({
+ getState:()=>({...engine.snapshot(),phase:document.body.dataset.phase,active:ready||touchMode,configured,voiceConfigured,emailOpen:!$('emailPanel').hidden,emailSent:photoEmail.status==='sent',emailQueued:photoEmail.queued}),
+ start:startManual,voice:begin,action:touchAction,finish:end,labels:themeLabels
+});
+$('cameraEnable').addEventListener('click',enableCamera);
+$('useTouch').addEventListener('click',()=>useTouch());
+$('contactKeyboardToggle').addEventListener('click',()=>{const show=$('emailKeyboard').hidden;$('emailKeyboard').hidden=!show;$('emailDomains').hidden=!show; $('contactKeyboardToggle').textContent=show?'Hide touch keyboard':'Show touch keyboard';});
+if(innerWidth<=600){$('emailKeyboard').hidden=true;$('emailDomains').hidden=true;$('emailInput').inputMode='email';$('guestNameInput').inputMode='text';$('contactKeyboardToggle').textContent='Show touch keyboard';}
+touchUI.render();
+
 // Configuration presence is a setup check, not proof that providers are working.
 // Voice/photo readiness is independent of the client-specific email setup.
 fetch('/api/health',{cache:'no-store',signal:AbortSignal.timeout(10000)})
   .then(async response=>{if(!response.ok)throw new Error('Unavailable');return response.json();})
   .then(status=>{
     if(status.packetId!=='DEMO-009')throw new Error('Unexpected app');
-    configured=status.hostEnabled===true&&status.voiceConfigured===true&&status.imageConfigured===true;
+    configured=status.imageConfigured===true;voiceConfigured=status.hostEnabled===true&&status.voiceConfigured===true;
+    document.body.dataset.emailConfigured=String(status.emailConfigured===true);
     document.body.dataset.configuration=configured?'ready':'pending';
     configurationHint='This experience is being prepared. Please check back soon.';
-    face.disabled=!configured;
+    face.disabled=!voiceConfigured;
     face.setAttribute('aria-label',configured?'Start talking to your AI photo host':'Blue is getting ready');
-    $('sentryToggle').disabled=!configured;
+    $('sentryToggle').disabled=!voiceConfigured;
     $('setupLink').hidden=configured;
-    text('Say hello to Blue.','Tap Blue to make your event portrait');
+    text('Ready for your royal portrait?','Choose your look and tap Start my photo to begin.');touchUI?.render();void enableCamera();
   }).catch(()=>{
     document.body.dataset.configuration='unavailable';
     configurationHint='Availability could not be checked. Please refresh to try again.';

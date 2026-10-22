@@ -5,19 +5,19 @@ test('spoken email is a draft only, and confirmation requires a valid address an
  let sends=0;const email=new PhotoEmail({deliver:async()=>sends++});
  assert.ok(email.review('alex@example.com').error);assert.equal(await email.confirm(),false);
  email.setImage(new Blob(['approved']));email.review('a l e x at example dot com');assert.equal(await email.confirm(),false);
- email.review('alex@example.com');assert.equal(sends,0);assert.equal(email.snapshot().status,'review');
+ email.review('alex@example.com');email.editName('Alex Guest');assert.equal(sends,0);assert.equal(email.snapshot().status,'review');
  assert.equal(await email.confirm(),true);assert.equal(sends,1);assert.equal(email.draft,'');
  assert.equal(await email.confirm(),false);assert.equal(sends,1);
 });
 test('double tapping confirmation cannot send twice, reset suppresses a late response',async()=>{
  let resolve,sends=0;const email=new PhotoEmail({deliver:()=>{sends++;return new Promise(r=>resolve=r);}});
- email.setImage(new Blob(['one']));email.review('guest@example.com');
+ email.setImage(new Blob(['one']));email.review('guest@example.com');email.editName('Guest Tester');
  const first=email.confirm();assert.equal(await email.confirm(),false);assert.equal(sends,1);
  email.reset();resolve();assert.equal(await first,false);assert.equal(email.status,'empty');assert.equal(email.image,null);
 });
 test('failed delivery preserves the editable draft and supports an explicit retry',async()=>{
  let sends=0;const email=new PhotoEmail({deliver:async({email})=>{sends++;if(sends===1)throw new Error('Temporary');assert.equal(email,'correct@example.com');}});
- email.setImage(new Blob(['approved']));email.review('typo@example.com');assert.equal(await email.confirm(),false);
+ email.setImage(new Blob(['approved']));email.review('typo@example.com');email.editName('Guest Tester');assert.equal(await email.confirm(),false);
  assert.equal(email.status,'error');email.edit('correct@example.com');assert.equal(await email.confirm(),true);assert.equal(sends,2);
 });
 test('a new picture invalidates the old address, and cancelled review clears it',()=>{
@@ -27,4 +27,17 @@ test('a new picture invalidates the old address, and cancelled review clears it'
 test('email validation rejects spoken, malformed and header-injection values',()=>{
  for(const value of ['alex@example.com','alex+photo@sub.example.com'])assert.equal(validEmail(value),true);
  for(const value of ['a b@example.com','alex at example.com','a@@example.com','x@example.com\r\nBcc: x@y.com','.x@example.com','x..x@example.com'])assert.equal(validEmail(value),false);
+});
+
+test('contact confirmation queues once while generating and requires name',async()=>{
+ let sends=0;const mail=new PhotoEmail({deliver:async()=>sends++});
+ mail.beginGeneration();mail.edit('guest@example.com');assert.equal(await mail.confirm(),false);
+ mail.editName('Test Guest');await mail.confirm();await mail.confirm();assert.equal(mail.queued,true);assert.equal(sends,0);
+ mail.setImage(new Blob(['approved']));await new Promise(r=>setImmediate(r));assert.equal(sends,1);assert.equal(mail.status,'sent');
+});
+test('image arrival preserves unfinished contact form and reset clears queued delivery',async()=>{
+ let sends=0;const mail=new PhotoEmail({deliver:async()=>sends++});
+ mail.beginGeneration();mail.edit('guest@example.com');mail.editName('Test Guest');
+ mail.setImage(new Blob(['approved']));assert.equal(mail.draft,'guest@example.com');assert.equal(mail.name,'Test Guest');assert.equal(mail.status,'review');assert.equal(sends,0);
+ mail.reset();assert.equal(mail.draft,'');assert.equal(mail.name,'');assert.equal(mail.queued,false);
 });

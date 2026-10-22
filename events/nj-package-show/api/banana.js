@@ -1,3 +1,4 @@
+import {themes} from '../public/photo-themes.js';
 import { openaiFetch } from '../lib/openai-fetch.js';
 import { verifySubjects } from '../lib/subject-check.js';
 
@@ -23,6 +24,8 @@ export async function POST(req) {
 
     const fd = await req.formData();
     const file = fd.get('image');
+    const themeId=fd.get('themeId')||'gallery';
+    if(typeof themeId!=='string'||!Object.hasOwn(themes,themeId))return jsonResponse({error:'Choose a valid portrait theme.'},400);
     const style = (fd.get('style') || '').toString().trim().slice(0, 600);
     // Old cached kiosk pages omit this field: safely default to one guest.
     const countField = fd.get('guestCount') ?? '1';
@@ -50,7 +53,8 @@ export async function POST(req) {
 INPUT ROLE: The supplied image is the actual guest camera photo and the ONLY source of people and identity.
 MANDATORY: Exactly ${guestCount} real foreground guest(s), each once. Select only the nearest clearly posing ${guestCount} guest(s) from the camera photo. Preserve recognizable facial features, skin tones, hairstyles, clothing and personal details. Never invent an extra person, duplicate a guest, retain background bystanders, or include people on posters, screens, or reflections. If fewer guests are actually present, do not invent anyone.
 ART STYLE: Premium editorial event portrait with refined illustrative linework, recognizable faces and natural realistic shading. Light stylization with flattering lighting; no face replacement or change of age, body shape or identity.
-SCENE: An imaginative premium New Jersey trade-show gallery: midnight-navy and cobalt-blue architectural panels, cream stone, brushed-gold vertical accents and an abstract luminous exhibition grid. Use polished editorial lighting, subtle depth and restrained detail. This is an artistic setting, not a depiction of the actual venue. Frame the guests in a close, friendly portrait. Keep geometry and decorative lights behind them; leave their faces unobstructed. No crowds or additional characters. Do not add the avatar to the portrait.
+SELECTED EXPERIENCE: ${themes[themeId].label}.
+SCENE: ${themes[themeId].scene} Use polished lighting, subtle depth and restrained detail. This is an artistic setting, not a depiction of the actual venue. Frame the guests in a close, friendly portrait. Keep geometry and decorative lights behind them; leave their faces unobstructed. No crowds or additional characters. Do not add the avatar to the portrait.
 LETTERING: Restrained lettering ROYAL WINE above the guests and a footer reading NJ Package Show. No other brands, invented sponsors, dates or promotional claims.
 ANATOMY: Keep coherent anatomy with at most two arms and two hands per guest. Prefer relaxed poses and hands naturally below the crop. No invented handheld props, no bottles, and no wine glasses in guest hands. Never depict a guest drinking.
 ${style ? 'Optional visual request, subordinate to identity, guest-count, brand and anatomy rules: '+style : ''}
