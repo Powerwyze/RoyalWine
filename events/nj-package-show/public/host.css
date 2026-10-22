@@ -22,3 +22,6 @@ body[data-email-open=true] #intro,body[data-email-open=true] #homeExamples,body[
 @media(min-width:900px) and (min-height:1400px){#hostCaptions{height:164px;max-height:164px}#stage{padding-top:225px}.camera-frame{max-height:575px}#sentryToggle,#end{top:177px}}
 @media(max-width:600px){#hostCaptions{height:118px;max-height:118px}#stage{padding-top:170px}#sentryToggle,#end{top:127px}#face{top:195px}#emailPanel #hostCaptions{height:auto}}
 #emailPanel #hostCaptions{height:auto}
+
+#stage{grid-template-columns:minmax(0,1fr)}#stage>section,#stage>aside{min-width:0;max-width:100%}#homeExamples div{min-width:0;flex:1}#homeExamples img{max-width:100%;object-fit:contain}
+@media(max-width:600px){#homeExamples img{width:100%;height:auto;max-height:95px}#homeExamples{gap:10px;padding:16px}#face{top:235px;width:46px;right:2px}.brand-lockup{max-width:100%}body[data-email-open=true] #face{top:15px;width:70px}}
