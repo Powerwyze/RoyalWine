@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, Download, Loader2, Mail, RefreshCw, Check, X } from "lucide-react";
-import blackIrishImg from "@/assets/black-irish-masquerade.jpg.asset.json";
+import blackIrishImg from "@/assets/black-irish-clean-pose.png.asset.json";
 import mexxoImg from "@/assets/mexxo-masquerade.jpg.asset.json";
 import mariahImg from "@/assets/mariah-carey-masquerade.jpg.asset.json";
 import logoImg from "@/assets/black-irish-logo.jpg.asset.json";
@@ -57,8 +57,8 @@ function drawScaled(src: CanvasImageSource, w: number, h: number, max = 1536) {
   return c;
 }
 
-/** Composite brand plaque + AI label on the generated portrait. Returns bare base64 JPEG + data URL. */
-async function composite(b64: string, scene: SceneId, mimeType = "image/jpeg") {
+/** Add only the AI label to the generated portrait. Returns bare base64 JPEG + data URL. */
+async function composite(b64: string, mimeType = "image/jpeg") {
   const img = await loadImage(`data:${mimeType};base64,${b64}`);
   const c = document.createElement("canvas");
   c.width = img.naturalWidth;
@@ -67,22 +67,6 @@ async function composite(b64: string, scene: SceneId, mimeType = "image/jpeg") {
   if (!ctx) throw new Error("Canvas is unavailable");
   ctx.drawImage(img, 0, 0);
   const pad = Math.round(c.width * 0.03);
-  if (scene === "black-irish") {
-    try {
-      const logo = await loadImage(logoImg.url);
-      const w = Math.round(c.width * 0.26);
-      const h = Math.round((w * logo.naturalHeight) / logo.naturalWidth);
-      const x = c.width - w - pad;
-      const y = c.height - h - pad;
-      ctx.fillStyle = "rgba(250,246,236,0.94)";
-      ctx.beginPath();
-      ctx.roundRect(x - 8, y - 8, w + 16, h + 16, 10);
-      ctx.fill();
-      ctx.drawImage(logo, x, y, w, h);
-    } catch {
-      /* logo optional */
-    }
-  }
   const label = "AI-created portrait";
   const fs = Math.max(14, Math.round(c.width * 0.02));
   ctx.font = `600 ${fs}px Manrope, sans-serif`;
@@ -262,7 +246,7 @@ function Kiosk() {
       const json = await res.json().catch(() => ({}));
       if (session !== sessionRef.current || gen !== genRef.current) return;
       if (!res.ok || !json.imageBase64) throw new Error(json.error || "The portrait could not be created.");
-      const out = await composite(json.imageBase64, scene, json.mimeType);
+      const out = await composite(json.imageBase64, json.mimeType);
       if (session !== sessionRef.current || gen !== genRef.current) return;
       setOutput({ ...out, id: crypto.randomUUID(), gen });
       setPhase("result");

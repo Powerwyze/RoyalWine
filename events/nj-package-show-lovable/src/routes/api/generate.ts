@@ -2,16 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { getScene, parseGuestCount } from "@/lib/kiosk";
 import { buildImageEditRequest } from "@/lib/image-edit";
 import { clientKey, rateLimited } from "@/lib/rate-limit.server";
-import blackIrishRef from "@/assets/black-irish-masquerade.jpg.asset.json";
-import mexxoRef from "@/assets/mexxo-masquerade.jpg.asset.json";
-import mariahRef from "@/assets/mariah-carey-masquerade.jpg.asset.json";
-
-// Server-approved reference per scene; the browser cannot substitute images.
-const REFERENCE_URL: Record<string, string> = {
-  "black-irish": blackIrishRef.url,
-  mexxo: mexxoRef.url,
-  mariah: mariahRef.url,
-};
+import { getSceneReferences } from "@/lib/scene-references";
 
 const MAX_BYTES = 8 * 1024 * 1024;
 
@@ -42,14 +33,21 @@ export const Route = createFileRoute("/api/generate")({
         if (!(guest instanceof File)) return err(400, "A photo is required.");
         if (guest.size === 0 || guest.size > MAX_BYTES || !/^image\/(jpeg|png|webp)$/.test(guest.type))
           return err(400, "Photo must be JPEG/PNG/WebP under 8 MB.");
-        const referenceUrl = REFERENCE_URL[scene.id];
-        if (!referenceUrl) return err(503, "Scene image unavailable.");
-        const refRes = await fetch(new URL(referenceUrl, request.url)).catch(() => null);
-        if (!refRes?.ok) return err(503, "Scene image unavailable. Please try again.");
-        const reference = new File([await refRes.arrayBuffer()], "reference.jpg", { type: "image/jpeg" });
-
+        const { template, brand } = getSceneReferences(scene.id);
+        const readReference = async (asset: typeof template) => {
+          const res = await fetch(new URL(asset.url, request.url), { signal: request.signal });
+          if (!res.ok) throw new Error("Scene image unavailable.");
+          return new File([await res.arrayBuffer()], asset.original_filename, { type: asset.content_type });
+        };
+        let reference: File;
+        let brandReference: File | undefined;
+        try {
+          [reference, brandReference] = await Promise.all([readReference(template), brand ? readReference(brand) : undefined]);
+        } catch {
+          return err(503, "Scene image unavailable. Please try again.");
+        }
         const encode = async (file: File) => `data:${file.type};base64,${Buffer.from(await file.arrayBuffer()).toString("base64")}`;
-        const upstream = buildImageEditRequest(scene, guestCount, await encode(reference), await encode(guest));
+        const upstream = buildImageEditRequest(scene, guestCount, await encode(reference), await encode(guest), brandReference ? await encode(brandReference) : undefined);
 
         // One bounded retry for transient failures only (429/5xx).
         for (let attempt = 0; attempt < 2; attempt++) {

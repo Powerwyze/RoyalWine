@@ -96,6 +96,49 @@ describe("camera-only automatic formalwear rules", () => {
     expect(buildPrompt(scene("mariah"), 1)).toContain("in the same reference facial and fashion treatment");
     expect(expectedPeople(scene("mariah"), 1)).toBe(2);
   });
+  it("moves only Black Irish glass to the marble table beside the bottle", () => {
+    const p = buildPrompt(scene("black-irish"), 1);
+    expect(p).toContain("move the cream-drink glass from the guest hand onto the marble table beside the bottle");
+    for (const id of ["mexxo", "mariah"]) expect(buildPrompt(scene(id), 1)).not.toContain("TABLETOP POSE EXCEPTION");
+  });
+  it("requires fully visible Black Irish labels and hands away from both products", () => {
+    const p = buildPrompt(scene("black-irish"), 1);
+    expect(p).toContain("front printed label fully visible and unobstructed");
+    expect(p).toContain("Keep all hands away from ALL bottle and glass label/print surfaces");
+    expect(p).toContain("other hands rest naturally away from the products");
+  });
+  it("permits a shared tabletop glass while preserving Black Irish reference props", () => {
+    expect(buildPrompt(scene("black-irish"), 2)).toContain("One shared tabletop cream-drink glass is fine even for a group");
+    expect(expectedPeople(scene("black-irish"), 2)).toBe(2);
+  });
+  it.each(SCENES)("requires exactly two attached arms and two hands for every person in $id", (s) => {
+    for (const n of [1, 2, 3]) {
+      const p = buildPrompt(s, n);
+      expect(p).toContain(`ANATOMY: exactly ${n} camera ${n === 1 ? "guest" : "guests"}`);
+      expect(p).toContain("exactly two anatomically attached arms and two hands");
+      expect(p).toContain("natural shoulders, elbows and wrists");
+      expect(p).toContain("No extra, ghost or disconnected limbs, no duplicated hands");
+    }
+  });
+  it("erases both original bodies and every old limb for single-guest brand scenes", () => {
+    for (const id of ["black-irish", "mexxo"]) {
+      const p = buildPrompt(scene(id), 1);
+      expect(p).toContain("Erase both template bodies and all of their old limbs");
+      expect(p).toContain("including all original arms, hands, legs, torso and clothing");
+      expect(p).toContain("not simply heads or faces");
+    }
+    expect(buildPrompt(scene("mariah"), 1)).toContain("replace the ENTIRE original right-hand guest");
+    expect(buildPrompt(scene("mariah"), 1)).toContain("preserve exactly one complete Mariah on the left");
+  });
+  it("keeps whole-person source order and an uncrowded mask pose", () => {
+    for (const s of SCENES) {
+      const p = buildPrompt(s, 2);
+      expect(p).toContain("whole-person likeness");
+      expect(p).toContain("left-to-right order; never swap guests or their outfits");
+      expect(p).toContain("one arm may hold a mask below the chin");
+      expect(p).toContain("the other hand rests naturally. No crowded crossed-arm pose");
+    }
+  });
   it("validates email", () => {
     expect(isValidEmail("a@b.co")).toBe(true);
     expect(isValidEmail("nope")).toBe(false);

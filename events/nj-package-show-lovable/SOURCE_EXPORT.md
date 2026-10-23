@@ -2,35 +2,35 @@
 
 Live app: https://royal-wine-masquerade.lovable.app
 Editor: https://lovable.dev/projects/d9ad4bcc-97d5-4e4e-ad57-56ebb5cc3312
-Lovable source commit: 8b83d6ea650c07b28dd6a0d3e256ed87ad877144
-Exported: 2026-10-22.
+Lovable source commit: 6f662807acc284dc6712e7adc46b49e82b2d9360
+Exported: 2026-10-23.
 
 This is a source snapshot in Powerwyze/RoyalWine, not an automatically synchronized Lovable GitHub connection. Continue editing, dependency installation, builds and tests in Lovable or another approved remote environment.
 
 ## Product and generation
 
-A camera-only portrait kiosk with exactly three choices: Black Irish Masquerade, MEXXO Masquerade, and an AI masquerade portrait with Mariah Carey. No avatar, upload/import fallback or manual outfit controls. Guests choose one to three foreground people and use the five-second camera countdown, review/retake, generation, download, optional confirmed photo email and reset.
+Camera-only portrait kiosk with exactly three choices: Black Irish Masquerade, MEXXO Masquerade, and an AI masquerade portrait with Mariah Carey. No avatar, upload/import fallback or manual outfit controls. Guests select one to three foreground people, use the camera countdown and review/retake, then generate, download, optionally confirm photo email, and reset.
 
-Generation now uses the documented native Lovable Gemini 3 Pro Image editor (google/gemini-3-pro-image) to match the supplied scenes' softly painted illustration style, including faces and hair. The server-selected original scene is image 1/base artwork; the camera photo is image 2/identity and clothing reference. The prompt edits guest characters while retaining the reference's brand palette, setting, architecture, bottle and label placement. The two brand scenes contain only selected foreground guests; the Mariah scene contains those guests plus exactly one Mariah. Natural artist-translated likeness and hand-painted detail variation are expected.
+The native Lovable Gemini 3 Pro Image editor receives the server-selected scene as image 1 and the camera identity/clothing reference as image 2. Black Irish also receives the approved standalone logo as image 3. The full clean-pose Black Irish PNG powers its preview and generation directly. Its large outlined lettering, gold/green crest and green Irish Cream script replace the prior plain wall branding. The bottle and drinks remain on the table; no corner logo plaque is composited over the output. Browser export adds only the small AI-created portrait label.
 
-Formalwear follows visible clothing only: dresses/skirts become the scene gown; separates/trousers/suits become a tuxedo; cropped or ambiguous clothing defaults to a tuxedo. The app does not classify gender from appearance.
+The prompt replaces complete guest bodies and their original limbs, requires two attached arms/hands per person, preserves recognizable illustrated identity and source order, and excludes bystanders. The Mariah choice keeps exactly one Mariah with the selected guests. Formalwear follows visible clothing: dresses/skirts become the scene gown; separates/trousers/suits and ambiguous clothing become a tuxedo. The app does not classify gender from appearance.
 
-Normal generation uses one model call, with one bounded retry for transient 429/5xx failures. PNG output is composited in the browser and exported as JPEG for download/email. LOVABLE_API_KEY is managed by Lovable and is not included here.
+Normal generation uses one image-model call, with one bounded retry for transient 429/5xx failures. PNG output is converted to JPEG for download/email. Experimental geometry detection and extra logo compositing were reverted after failed visual tests; those paths are absent from final source. LOVABLE_API_KEY remains managed by Lovable and is not included here.
 
 ## Photo email
 
-The server forwards explicitly confirmed photo email to the existing Royal Wine Vercel delivery service. Name (2–120 characters) and email are required; address review, Send when ready, deduplication and reset remain. The shared email heading now says “A royal portrait.”; “Great connections.” was removed in delivery-service commit ffed3994c7170ace0c5ea079dbbbc0425a4dc0f7, deployed as dpl_3us8DNyo5k4BJ1gyJrWct4XgPNKe.
-
-The Vercel service uses existing RESEND_API_KEY, RESEND_FROM_EMAIL and RESEND_REPLY_TO variables. No new credentials were added. The Vercel application otherwise retains its prior behavior. Existing delivered emails are not modified.
+Confirmed photo email uses the existing Royal Wine Vercel delivery service. Name/email review, explicit Send, deduplication and session reset remain. Its heading says “A royal portrait.”; “Great connections.” was removed in delivery-service commit ffed3994c7170ace0c5ea079dbbbc0425a4dc0f7 (deployment dpl_3us8DNyo5k4BJ1gyJrWct4XgPNKe). Previously delivered emails are not modified. Existing RESEND_API_KEY, RESEND_FROM_EMAIL and RESEND_REPLY_TO settings remain unchanged.
 
 ## Assets and privacy
 
-The four user-approved brand/reference JPEGs and logo favicon remain included in public paths matching the asset manifests. No private test photo, generated guest likeness, contact data, secret/environment file, dependency installation or build output is included. Private QA media stayed in temporary Lovable sandbox storage. Guest images are not persisted by app code; generation still involves an AI provider.
+Approved brand/reference assets are included at public paths matching their manifests, including both generated scene-only Black Irish reference revisions. Only the clean-pose PNG is active. No private test input, generated guest likeness, contact data, secret/environment file, dependency installation or build output is included. QA media stayed in temporary remote sandbox storage. App code does not persist guest images; AI-provider retention is not established by this code.
 
-## Verification
+## Verification and limits
 
-Current Lovable correction: 31 tests passed across prompt, actual upstream template/photo ordering, delivery deduplication and routing. Automatic build/type checks passed. Real Black Irish and MEXXO calls completed in 20.6 s and 19.3 s with recognizable softly illustrated guests, source hairstyle, natural proportions, tuxedos, held masks, reference-specific settings and no bystanders. Earlier unsuccessful experiments remain marked historical in docs/QA-REPORT.md. Mariah and multiple-guest images were not regenerated with the final renderer; their prompt/count rules have test coverage.
+41 tests and automatic build checks passed remotely. One real authorized private-photo camera → generation → JPEG flow completed in 21.04 seconds. The full portrait and enlarged anatomy/branding crops were inspected: one recognizable illustrated guest, two attached arms/hands, no retained template bodies, outlined wall/bottle branding, tabletop drinks and no corner plaque. The JPEG download matched the mocked email bytes; Finish cleared the session and no page errors occurred.
 
-The real fake-camera browser flow passed countdown, review, generation, PNG compositing and JPEG download. The mocked email payload contained the exact downloaded JPEG and expected synthetic contact values. No real email was sent.
+A separate real two-guest camera → generation → JPEG flow completed in 27.57 seconds using a privately generated fictional adult fixture. Inspection found two recognizable illustrated guests with two coherent arms/hands each, correct tux/gown mapping, no leftover template person and no corner plaque. Downloaded JPEG bytes matched the mocked email, and Finish/reset passed without page errors. The output reversed source guest order; the woman's face was more glamour-stylized than the fixture. Group ordering and exact facial fidelity are not guaranteed.
 
-Delivery service: 30 existing API and mocked-email tests passed in a Vercel cloud validation build of the deployed commit. The live mail endpoint returned the expected GET 405. Real inbox delivery was not retested.
+Small model-rendered lettering and fine facial details can vary. Prompt instructions and passing samples do not guarantee future anatomy or identity. Mariah and three-guest outputs were not regenerated with this final reference/prompt change. No real email was sent in these checks. Historical failed experiments are retained as such in docs/QA-REPORT.md.
+
+The existing Vercel email service previously passed 30 API/mocked-email tests in a cloud validation build; real inbox delivery was not retested.
