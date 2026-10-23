@@ -1,0 +1,26 @@
+# Royal Wine Masquerade
+
+Camera-only event photo kiosk built and verified in Lovable cloud. Exactly three scenes: Black Irish Masquerade, MEXXO Masquerade, and With Mariah Carey. No avatar, guest uploads, file selection, or manual wardrobe controls.
+
+## Guest experience
+Choose a scene and 1–3 guests. Use the mirrored camera preview, five-second countdown and unmirrored full-frame JPEG capture, then review or retake. Camera denial/unavailability offers guidance, Retry camera and Start over only; capture waits for a live decoded frame. Generate the portrait, download it, or explicitly confirm optional email (email first, required trimmed name 2–120 characters). Finish clears browser session data. Late camera/capture results cannot revive a reset session.
+
+## Automatic formalwear
+Each primary foreground guest’s visible dress/skirt becomes the scene’s floor-length gown: emerald for Black Irish, teal for MEXXO, burgundy/emerald next to Mariah. Visible separates/trousers/suits or ambiguous/cropped outfits become a black tuxedo with white shirt and bow tie. This is artistic clothing matching, not gender classification; no gender labels, questionnaire or manual styling choice are used.
+
+The server validates `guestCount` as integer 1–3, ignores legacy `wardrobes` fields, and binds the scene reference itself. Prompts preserve recognizable identities and exact primary-guest count, exclude bystanders, and keep masks held beside faces with uncovered eyes. Mariah adds exactly one reference Mariah on the left and replaces the other reference guest.
+
+## Privacy and architecture
+Guest photos and portraits live only in browser memory, not application storage. The browser posts its camera JPEG, scene and guestCount to `/api/generate`; Lovable AI receives camera photo and server-bound reference. Email goes through `/api/send-photo` to the existing Royal Wine delivery service, only after confirmation. Payload-hash dedupe counts only confirmed upstream success.
+
+## Authoritative reference illustration
+The original selected scene is image 1: the BASE ARTWORK and authoritative style AND composition template. The camera photograph is image 2: identity and visible-clothing reference only, not output style or selfie crop. `src/lib/image-edit.ts` builds the documented `google/gemini-3-pro-image` JSON edit request to `/v1/images/generations`, with ordered inline image URLs, image/text modalities and supported 2:3 aspect ratio. No OpenAI-only size/quality/fidelity fields are sent. One model call normally creates each portrait; the existing bounded transient retry may make a second call. PNG model output is decoded using its MIME and composited into the final JPEG. Edit only illustrated character regions, retaining the original palette, architecture, brand placement and visible bottle/label. Camera identity/hairstyle affects guests only, never the environment. Recognizable softly drawn likeness with natural proportions and source hairstyle is the goal, not pixel-identical faces or bottle detail. Do not paste photographic faces, replace the brand setting or use exaggerated heads/plastic 3D. Mariah is retained from template-left; only template-right is replaced. Earlier photographic edit iterations remain historical.
+
+## Clean-pose reference verification — 2026-10-23
+Black Irish preview and generation both use the full uploaded `black-irish-clean-pose.png` directly, with camera JPEG second and approved logo JPEG third. No prepared derivative, detector, blank-label template, branding compositor or corner plaque. Other scenes remain unchanged. Entire-person replacement and explicit anatomy/source-order safeguards remain; preserve drinks on table and the supplied outlined wall/bottle brand family rather than chase microscopic glass lettering.
+
+One actual authorized private fake-camera flow returned HTTP 200 in **21.04 s**, downloaded **848×1264 JPEG**, and confirmed byte-identical explicitly requested mocked email. Finish cleared the session; no browser page errors. Full portrait and enlarged anatomy/wall/bottle/glass crops inspected: one recognizable softly illustrated guest, source tied-up hairstyle, tuxedo/white shirt/bow tie, two attached arms/two hands, no leftover reference bodies/limbs, mask below face, table props clear, cream/emerald/gold scene, outlined wall and bottle brand family, no corner plaque. Accepted for this single sample under the user's practical criteria; tiny tagline/glass text remains model-variable and not pixel-exact. Artist translation simplifies facial detail and beard color.
+
+**Group verification remains blocked:** the existing synthetic two-guest photo/video from the prior sandbox is absent and could not be recovered. No new substitute or second model call was made. Reattach that fixture to verify group identity/order/anatomy. Exactly one real generation, no retry or real email, no deployment; all QA likenesses remain in /tmp. 41 tests passed, automatic build OK. Historical failed experiments remain marked reverted in QA notes. App code does not persist pixels; provider retention is not established by this code.
+
+Built with TanStack Start, React, TypeScript and Tailwind CSS. Publication remains a separate user-reviewed action.
