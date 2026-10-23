@@ -34,6 +34,9 @@
     },
     "api/host-greeting.js": {
       "maxDuration": 15
+    },
+    "api/masquerade.js": {
+      "maxDuration": 300
     }
   }
 }
