@@ -1,0 +1,57 @@
+// Prepared replacement for the Lovable clone's src/routes/api/generate.ts.
+// Apply only after /api/masquerade has been deployed to the stable Vercel domain.
+// Not active in the live Lovable app; its workspace currently rejects build edits.
+import { createFileRoute } from "@tanstack/react-router";
+import { getScene, parseGuestCount } from "@/lib/kiosk";
+import { clientKey, rateLimited } from "@/lib/rate-limit.server";
+
+const GENERATION_URL = "https://royal-wine-nj-package-kiosk.vercel.app/api/masquerade";
+const MAX_BYTES = 3 * 1024 * 1024;
+function error(status: number, message: string) {
+  return Response.json({ error: message }, { status, headers: { "Cache-Control": "no-store" } });
+}
+export const Route = createFileRoute("/api/generate")({
+  server: { handlers: {
+    POST: async ({ request }) => {
+      if (rateLimited("gen:" + clientKey(request), 12, 10 * 60_000))
+        return error(429, "Too many portraits in a short time. Please wait a minute.");
+      let form: FormData;
+      try { form = await request.formData(); } catch { return error(400, "Invalid camera photo."); }
+      const scene = getScene(String(form.get("scene") ?? ""));
+      const guestCount = parseGuestCount(form.get("guestCount"));
+      if (!scene || form.getAll("scene").length !== 1) return error(400, "Choose a valid masquerade scene.");
+      if (guestCount === undefined || form.getAll("guestCount").length !== 1) return error(400, "Choose 1–3 guests.");
+      const guest = form.get("guest");
+      if (!(guest instanceof File) || form.getAll("guest").length !== 1)
+        return error(400, "A camera photo is required.");
+      if (!guest.size || guest.size > MAX_BYTES || !/^image\/(jpeg|png|webp)$/.test(guest.type))
+        return error(400, "Photo must be JPEG/PNG/WebP under 3 MB. Please retake.");
+      const body = new FormData();
+      body.set("scene", scene.id); body.set("guestCount", String(guestCount));
+      body.set("guest", guest, "camera-photo");
+      try {
+        const upstream = await fetch(GENERATION_URL, {
+          method: "POST", body, redirect: "error",
+          signal: AbortSignal.any([request.signal, AbortSignal.timeout(185000)]),
+        });
+        const data = await upstream.json().catch(() => null);
+        if (!upstream.ok) {
+          const messages: Record<number, string> = {
+            400: "Please check the scene, guest count and camera photo.",
+            402: "The OpenAI API account used by Vercel has reached its credit or spending limit. Please ask staff.",
+            429: "The portrait service is busy. Please wait a minute.",
+            503: "The Vercel portrait service is unavailable. Please ask staff.",
+          };
+          return error(upstream.status >= 400 && upstream.status <= 599 ? upstream.status : 502,
+            messages[upstream.status] ?? "The portrait could not be created. Please try again.");
+        }
+        if (typeof data?.imageBase64 !== "string" || !data.imageBase64 || data.mimeType !== "image/jpeg")
+          return error(502, "The portrait provider returned no valid image.");
+        return Response.json({ imageBase64: data.imageBase64, mimeType: data.mimeType },
+          { headers: { "Cache-Control": "no-store" } });
+      } catch {
+        return error(503, "The Vercel portrait service could not finish. Please try again.");
+      }
+    },
+  }},
+});
