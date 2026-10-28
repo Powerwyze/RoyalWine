@@ -1,0 +1,29 @@
+name: Verify NJ branded delivery remotely
+on:
+  push:
+    branches: [codex/nj-branded-delivery]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: events/nj-package-show
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - run: npm install --no-save --package-lock=false playwright@1.56.1
+      - run: npx playwright install --with-deps chromium
+      - run: node tests/banner.e2e.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nj-branded-delivery
+          path: events/nj-package-show/artifacts/
+          retention-days: 7

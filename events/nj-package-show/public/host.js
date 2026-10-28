@@ -1,3 +1,4 @@
+import {brandPortrait} from './branded-image.js';
 import {themeLabels} from './photo-themes.js';
 import {mountTouchControls} from './host-touch.js';
 import { BoothEngine,LiveTools } from './host-engine.js';
@@ -190,7 +191,7 @@ const engine=new BoothEngine({
     const blob=await res.blob();
     if(!blob.size||!blob.type.startsWith('image/'))throw new Error('No picture was returned. Ask me to try again.');
     // Decode before reporting success or revealing the image.
-    const bitmap=await createImageBitmap(blob);bitmap.close();return blob;
+    const bitmap=await createImageBitmap(blob);bitmap.close();return brandPortrait(blob);
   },
   onChange:(state,image)=>{
     syncIdle();
