@@ -1,3 +1,4 @@
+import {persistPortrait,deliveryActions} from '../lib/portrait-delivery.js';
 import { photoEmailConfig } from '../lib/photo-email-config.js';
 import { Resend } from 'resend';
 import { createHash } from 'node:crypto';
@@ -45,6 +46,9 @@ export default async function handler(req, res) {
 
     const resend = new Resend(resendApiKey);
     const finalFilename = cleanFilename(filename, 'royal-wine-nj-portrait.jpg');
+    const isMasquerade=finalFilename==='royal-wine-masquerade.jpg';
+    const emailHtml=isMasquerade?EMAIL_HTML.replaceAll('NJ Package Show','Masquerade').replaceAll('New Jersey','Masquerade'):EMAIL_HTML;
+    const emailText=isMasquerade?EMAIL_TEXT.replaceAll('NJ Package Show','Masquerade'):EMAIL_TEXT;
     const from = config.from;
     const replyTo = config.replyTo;
     // Scope idempotency to the complete provider payload. A template, sender or
@@ -53,9 +57,9 @@ export default async function handler(req, res) {
       from,
       to: [String(email).trim()],
       ...(replyTo ? { replyTo } : {}),
-      subject: 'Your Royal Wine New Jersey portrait',
-      html: EMAIL_HTML,
-      text: EMAIL_TEXT,
+      subject: isMasquerade?'Your Royal Wine Masquerade portrait':'Your Royal Wine New Jersey portrait',
+      html: emailHtml,
+      text: emailText,
       attachments: [{
         filename: finalFilename,
         content: bytes.toString('base64'),
@@ -64,6 +68,13 @@ export default async function handler(req, res) {
     };
     const guestName=typeof name==="string"?name.trim():"";
     if(guestName){const safe=guestName.replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));message.text="Hello "+guestName+",\n\n"+message.text;message.html=message.html.replace("<p>A NJ Package Show moment","<p>Hello "+safe+",</p><p>A NJ Package Show moment");}
+    if(process.env.BLOB_STORE_ID||process.env.BLOB_READ_WRITE_TOKEN){
+      const storage=await import('@vercel/blob');
+      const links=await persistPortrait({bytes,recipient:String(email),key:resendApiKey,mimeType:finalMime,storage});
+      const actions=deliveryActions(links);
+      message.html=message.html.replace('<p><a href="https://royalwine.com/"',actions.html+'<p><a href="https://royalwine.com/"');
+      message.text+=actions.text;
+    }
     const deliveryId = createHash('sha256').update(JSON.stringify(message)).digest('hex');
     const {data,error}=await resend.emails.send(message,{idempotencyKey:`royal-wine-photo-${deliveryId}`});
 

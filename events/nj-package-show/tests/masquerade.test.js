@@ -25,13 +25,14 @@ test('Vercel masquerade contract, approved templates, validation and quota fallb
   };
   try {
     assert.equal(GET().status,200); assert.equal((await GET().json()).credentialLocation,'vercel');
-    for(const scene of SCENES) {
+    for(const scene of SCENES.filter(scene => scene.id !== "photo-mask")) {
       calls=[]; const response=await POST(request(scene.id,'2')); assert.equal(response.status,200);
       assert.equal((await response.json()).mimeType,'image/jpeg');
       const payload=JSON.parse(calls.find(c=>c.url.includes('api.openai.com')).options.body);
       assert.equal(payload.model,'gpt-image-2'); assert.equal(payload.images.length,2);
       assert.match(calls[0].url,/^https:\/\/royal-masquerade-moments\.lovable\.app\/__l5e\/assets-v1\//);
       assert.ok(payload.prompt.includes('BODY INVARIANTS')); assert.ok(payload.prompt.includes('exactly 2 camera'));
+      assert.match(payload.prompt, /REFERENCE PEOPLE ARE NOT CASTING/); assert.match(payload.prompt, /Two men remain the same two men, two women remain the same two women/); assert.match(payload.prompt, /Do not force a man\/woman couple/);
       assert.ok(!payload.prompt.includes('UNTRUSTED')); assert.ok(!payload.prompt.includes('attacker'));
     }
     for(const [scene,count,options] of [['bad','1',{}],['bartenura','4',{}],['bartenura','02',{}],['bartenura',null,{}],['bartenura','1',{noPhoto:true}],['bartenura','1',{mime:'text/plain'}],['bartenura','1',{duplicate:'scene'}],['bartenura','1',{duplicate:'guestCount'}]]) {

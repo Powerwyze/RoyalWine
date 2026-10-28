@@ -1,0 +1,40 @@
+name: Verify NJ branded delivery remotely
+on:
+  push:
+    branches: [codex/nj-branded-delivery]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: events/nj-package-show
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --package-lock-only --ignore-scripts
+      - run: npm ci --ignore-scripts
+      - name: Save dependency lockfile resolved remotely
+        run: |
+          git config user.name 'PowerWyze build'
+          git config user.email 'actions@users.noreply.github.com'
+          git add package-lock.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Lock private portrait storage dependency [skip ci]"
+            git push origin HEAD:codex/nj-branded-delivery
+          fi
+      - run: npm test
+      - run: npm install --no-save --package-lock=false playwright@1.56.1
+      - run: npx playwright install --with-deps chromium
+      - run: node tests/banner.e2e.mjs
+      - run: node tests/keyboard.e2e.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nj-branded-delivery
+          path: events/nj-package-show/artifacts/
+          retention-days: 7

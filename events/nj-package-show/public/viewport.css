@@ -1,0 +1,49 @@
+
+/* Viewport-sized guest steps: decorative samples yield space to the live camera. */
+html,body{height:100%;margin:0;overflow:hidden}
+#stage{height:100dvh;min-height:0;padding:8px 12px;display:flex;flex-direction:column;align-items:center;gap:6px;overflow:hidden}
+#stage>*{flex-shrink:0}
+#hostCaptions{position:relative;inset:auto;order:-10;width:100%;height:46px;min-height:0;max-height:46px;padding:3px 55px;background:#071c3d;border:0}
+.caption-speaker{font-size:10px}#hostCaptionText{font-size:14px;line-height:1.15;margin:3px 0;max-height:32px;overflow:hidden}
+#sentryToggle,#end{position:fixed;top:8px;min-height:36px;font-size:10px;padding:6px;max-width:90px}#sentryToggle{left:6px}#end{right:6px}
+#intro{order:-8;gap:3px}.brand-lockup{gap:10px}.brand-lockup img{height:32px;max-width:100px;padding:3px}.event-title{font-size:24px;margin:0}.event-meta,#intro>.eyebrow,#homeExamples,.examples-note{display:none}
+#face,body[data-phase=generating]:not([data-email-open=true]) #face{position:fixed;top:52px;right:4px;width:42px;opacity:.8}
+#viewfinder{order:-6;flex:1 1 120px;min-height:110px;width:min(100%,780px);display:flex;flex-direction:column;border-radius:12px}
+#viewfinder h2{font-size:16px;padding:5px}.camera-frame{flex:1;min-height:50px;aspect-ratio:auto}#cameraStatus{font-size:10px;padding:4px}
+#cameraEnable{min-height:44px;padding:8px;font-size:14px}
+#touchControls{order:-4;width:min(100%,780px)}#touchTitle{font-size:18px;margin:0 0 4px}.touch-help{font-size:12px;margin:0 0 4px}
+.touch-actions{gap:5px}.touch-actions button{min-height:44px;padding:7px;font-size:15px}
+#photoThemes{order:-2;width:min(100%,780px)}.examples-title{font-size:10px;margin:0 0 4px}.theme-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+.theme-card img{height:clamp(35px,8vh,100px);width:100%;object-fit:cover}.theme-card span{font-size:12px;padding:5px}.theme-card small{display:none}
+#sentryNotice{font-size:10px;margin:0}#picture{order:-6;flex:1 1 100px;min-height:0;height:0;max-height:none;width:min(100%,760px)}
+#emailOpen{min-height:44px;padding:8px;font-size:18px}
+body[data-email-open=true] #stage{padding:8px 12px}
+body[data-email-open=true] #face,body[data-email-open=true] #viewfinder,body[data-email-open=true] #sentryToggle,body[data-email-open=true] #end{display:none}
+#emailPanel{order:0;flex:1 1 auto;min-height:0;width:min(100%,760px);padding:8px;border-radius:12px}
+#emailPanel #hostCaptions{display:none}
+.email-heading .eyebrow,#emailHelp{display:none}
+#emailTitle{font-size:22px;line-height:1.1;margin:0 0 6px}
+#emailPanel label{font-size:12px;margin:3px 0}
+#emailInput,#guestNameInput{height:36px;font-size:18px;padding:5px 8px;border-radius:6px}
+#emailStatus{font-size:12px;min-height:0;margin:4px 0}
+#contactKeyboardToggle{min-height:32px;padding:4px;font-size:13px}
+#emailKeyboard{gap:3px}.key-row{gap:3px}.key-row button{min-height:36px;height:36px;font-size:16px;border-radius:5px}
+#emailDomains{margin:4px 0;gap:4px;flex-wrap:nowrap}#emailDomains button{min-height:32px;font-size:11px;padding:2px;min-width:0}
+#emailConfirm{min-height:44px;padding:6px;font-size:17px}.email-note{font-size:11px;margin:5px 0;line-height:1.2}
+#waitTabs{order:-1;display:flex;gap:8px;width:min(100%,760px)}#waitTabs button{flex:1;min-height:40px;border:1px solid var(--gold);border-radius:8px;background:#173554;color:white}
+#waitTabs button[aria-pressed=true]{background:var(--gold);color:#102340}
+body[data-wait-tab=game] #emailPanel{display:none}
+#memoryGame{order:0;flex:1 1 auto;min-height:0;width:min(100%,760px);text-align:center;display:flex;flex-direction:column;gap:10px}
+#memoryGame h2{font-size:clamp(23px,4vw,36px);margin:0}#memoryGame p{margin:0;font-size:15px}
+#memoryCards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;flex:1;min-height:100px;max-height:420px}
+#memoryCards button{min-height:44px;background:linear-gradient(140deg,#48215c,#162c4c);border:2px solid var(--gold);border-radius:12px;color:var(--gold);font-size:clamp(26px,5vw,56px)}
+#memoryCards button:disabled{opacity:.65}#memoryRestart{min-height:44px;border:1px solid var(--gold);border-radius:8px;background:#173554;color:white}
+body[data-phase=generating] #intro{display:none}
+#emailToast{font-size:16px;padding:8px}
+@media(min-height:800px){.key-row button{height:44px;min-height:44px}#emailInput,#guestNameInput{height:44px}#emailPanel{flex:0 1 auto}.theme-card img{height:100px}}
+@media(max-width:450px){.theme-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.theme-card img{display:none}.theme-card{min-height:44px}.theme-card span{font-size:13px}}
+@media(max-height:550px) and (min-width:650px){#stage{padding:4px 8px;gap:3px}#intro{display:none}#hostCaptions{height:32px;max-height:32px}.caption-speaker{display:none}#emailPanel{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px}.email-heading{grid-column:1}#emailKeyboard{grid-column:2;grid-row:1/9}#emailDomains{grid-column:2}#emailConfirm{grid-column:1}.email-note{grid-column:1/3}#contactKeyboardToggle{grid-column:1}}
+
+#emailDomains{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}#emailDomains button{font-size:12px}
+
+#hostCaptions{padding:3px 8px;height:50px;max-height:50px}#sentryToggle{position:relative;top:auto;left:auto;order:-9;align-self:flex-start;min-height:36px;max-width:160px;font-size:11px}#end{top:64px;right:12px}#face{top:100px}#hostCaptionText{max-height:34px}

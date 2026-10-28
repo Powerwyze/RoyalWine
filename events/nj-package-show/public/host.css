@@ -25,3 +25,7 @@ body[data-email-open=true] #intro,body[data-email-open=true] #homeExamples,body[
 
 #stage{grid-template-columns:minmax(0,1fr)}#stage>section,#stage>aside{min-width:0;max-width:100%}#homeExamples div{min-width:0;flex:1}#homeExamples img{max-width:100%;object-fit:contain}
 @media(max-width:600px){#homeExamples img{width:100%;height:auto;max-height:95px}#homeExamples{gap:10px;padding:16px}#face{top:235px;width:46px;right:2px}.brand-lockup{max-width:100%}body[data-email-open=true] #face{top:15px;width:70px}}
+
+/* Readonly fields select a target for the built-in keyboard without opening Android IME. */
+#emailInput[data-active=true],#guestNameInput[data-active=true]{outline:3px solid #fff0b0;outline-offset:2px}
+@media(max-width:600px){#emailPanel{padding:12px}.key-row{gap:3px}#emailKeyboard{gap:5px}.key-row button{min-height:44px;font-size:16px}#emailPanel #hostCaptions{max-height:90px;overflow:auto}#emailHelp{font-size:14px}#emailTitle{font-size:23px}body[data-email-open=true] #stage{padding-top:125px}}
