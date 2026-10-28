@@ -53,6 +53,9 @@ for (const count of [1, 2, 3]) {
     assert.equal(payload.size, '768x1152'); assert.equal(payload.n, 1);
     assert.equal(payload.images.length, 1);
     assert.match(payload.prompt,/actual guest camera photo/);
+    assert.match(payload.prompt,/REFERENCE PEOPLE ARE NOT CASTING/);
+    assert.match(payload.prompt,/Two men remain the same two men, two women remain the same two women/);
+    assert.match(payload.prompt,/Do not force a man\/woman couple/);
     assert.match(payload.prompt,/NJ Package Show/);
     assert.match(payload.prompt,/trade-show gallery/i);
     assert.doesNotMatch(payload.prompt,/Damn Good|Old.Fashioned|Sky Terrace|Level 25|South Florida|palm fronds/);

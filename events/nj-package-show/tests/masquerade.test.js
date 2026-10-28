@@ -32,6 +32,7 @@ test('Vercel masquerade contract, approved templates, validation and quota fallb
       assert.equal(payload.model,'gpt-image-2'); assert.equal(payload.images.length,2);
       assert.match(calls[0].url,/^https:\/\/royal-masquerade-moments\.lovable\.app\/__l5e\/assets-v1\//);
       assert.ok(payload.prompt.includes('BODY INVARIANTS')); assert.ok(payload.prompt.includes('exactly 2 camera'));
+      assert.match(payload.prompt, /REFERENCE PEOPLE ARE NOT CASTING/); assert.match(payload.prompt, /Two men remain the same two men, two women remain the same two women/); assert.match(payload.prompt, /Do not force a man\/woman couple/);
       assert.ok(!payload.prompt.includes('UNTRUSTED')); assert.ok(!payload.prompt.includes('attacker'));
     }
     for(const [scene,count,options] of [['bad','1',{}],['bartenura','4',{}],['bartenura','02',{}],['bartenura',null,{}],['bartenura','1',{noPhoto:true}],['bartenura','1',{mime:'text/plain'}],['bartenura','1',{duplicate:'scene'}],['bartenura','1',{duplicate:'guestCount'}]]) {
