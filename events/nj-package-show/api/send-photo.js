@@ -68,7 +68,7 @@ export default async function handler(req, res) {
     };
     const guestName=typeof name==="string"?name.trim():"";
     if(guestName){const safe=guestName.replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));message.text="Hello "+guestName+",\n\n"+message.text;message.html=message.html.replace("<p>A NJ Package Show moment","<p>Hello "+safe+",</p><p>A NJ Package Show moment");}
-    if(process.env.BLOB_STORE_ID||process.env.BLOB_READ_WRITE_TOKEN){
+    if(isMasquerade || process.env.BLOB_STORE_ID || process.env.BLOB_READ_WRITE_TOKEN){
       const storage=await import('@vercel/blob');
       const links=await persistPortrait({bytes,recipient:String(email),key:resendApiKey,mimeType:finalMime,storage});
       const actions=deliveryActions(links);

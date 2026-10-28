@@ -18,8 +18,8 @@ async function load(){
 }
 document.querySelector('#share').addEventListener('click',async()=>{
  if(!file)return;
- if(navigator.canShare?.({files:[file]})){try{await navigator.share({files:[file],title:'My Royal Wine portrait'});status.textContent='Share window closed. Complete your post in the app you chose.';}catch(e){if(e.name!=='AbortError')status.textContent='Sharing is unavailable. Download the image and upload it in your preferred app.';}}
- else status.textContent='Download your image, then upload it in your preferred social app. Nothing is posted automatically.';
+ if(typeof navigator.share==='function' && (!navigator.canShare || navigator.canShare({files:[file]}))){try{await navigator.share({files:[file],title:'My Royal Wine portrait'});status.textContent='Your image was shared with the app you chose.';}catch(e){if(e.name!=='AbortError')status.textContent='Sharing is unavailable. Download the image and upload it in your preferred app.';}}
+ else status.textContent='This browser cannot open image sharing. Tap Download Image, then open the saved portrait in your preferred app.';
 });
 addEventListener('hashchange',()=>void load());
 addEventListener('pagehide',()=>{++epoch;request?.abort();clear();});
