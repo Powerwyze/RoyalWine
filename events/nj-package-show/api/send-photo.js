@@ -46,6 +46,9 @@ export default async function handler(req, res) {
 
     const resend = new Resend(resendApiKey);
     const finalFilename = cleanFilename(filename, 'royal-wine-nj-portrait.jpg');
+    const isMasquerade=finalFilename==='royal-wine-masquerade.jpg';
+    const emailHtml=isMasquerade?EMAIL_HTML.replaceAll('NJ Package Show','Masquerade').replaceAll('New Jersey','Masquerade'):EMAIL_HTML;
+    const emailText=isMasquerade?EMAIL_TEXT.replaceAll('NJ Package Show','Masquerade'):EMAIL_TEXT;
     const from = config.from;
     const replyTo = config.replyTo;
     // Scope idempotency to the complete provider payload. A template, sender or
@@ -54,9 +57,9 @@ export default async function handler(req, res) {
       from,
       to: [String(email).trim()],
       ...(replyTo ? { replyTo } : {}),
-      subject: 'Your Royal Wine New Jersey portrait',
-      html: EMAIL_HTML,
-      text: EMAIL_TEXT,
+      subject: isMasquerade?'Your Royal Wine Masquerade portrait':'Your Royal Wine New Jersey portrait',
+      html: emailHtml,
+      text: emailText,
       attachments: [{
         filename: finalFilename,
         content: bytes.toString('base64'),

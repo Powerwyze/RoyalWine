@@ -28,5 +28,23 @@ try{
  }
  await page.route('**/assets/black-irish-logo.png',r=>r.fulfill({status:404}));
  await page.evaluate(async()=>{const {brandPortrait}=await import('/branded-image.js');const c=document.createElement('canvas');c.width=c.height=10;const b=await new Promise(r=>c.toBlob(r));try{await brandPortrait(b);throw Error('Expected missing logo failure');}catch(e){if(!e.message.includes('logo'))throw e;}});
+ // Recipient page uses only the requested bytes, never a social URL containing the token.
+ const recipient=await browser.newPage();
+ await recipient.route('**/api/portrait?id=*',async route=>{
+  if(route.request().url().includes('a'.repeat(64)))await route.fulfill({status:200,contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400"><rect width="300" height="400" fill="navy"/><text x="20" y="350" fill="white">TEST BRANDED PORTRAIT</text></svg>'});
+  else await route.fulfill({status:404,body:'Unavailable'});
+ });
+ await recipient.goto(base+'/portrait.html#'+'a'.repeat(64));
+ await recipient.locator('#actions:not([hidden])').waitFor();
+ assert(!recipient.url().includes('#'));
+ await recipient.locator('#share').click();
+ await recipient.waitForFunction(()=>document.querySelector('#status').textContent.includes('Download your image'));
+ assert.equal(await recipient.locator('a[href*="linkedin"],a[href*="facebook"]').count(),0);
+ const downloadPromise=recipient.waitForEvent('download');await recipient.locator('#download').click();await downloadPromise;
+ await recipient.goto(base+'/portrait.html#'+'b'.repeat(64));
+ await recipient.waitForFunction(()=>document.querySelector('#status').textContent.includes('unavailable'));
+ assert.equal(await recipient.locator('#actions').isVisible(),false);
+ await recipient.goto(base+'/portrait.html');await recipient.waitForFunction(()=>document.querySelector('#status').textContent.includes('invalid'));
+ await recipient.close();
  console.log('Banner: dimensions, three real assets, phone/kiosk rendering and missing-logo rejection passed.');
 }finally{await browser.close();await new Promise(r=>server.close(r));}
