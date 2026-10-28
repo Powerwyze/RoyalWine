@@ -460,6 +460,10 @@ $('contactKeyboardToggle').addEventListener('click',()=>{(activeContactInput===$
 // All screen sizes use the in-app keyboard; never opt phones back into the native IME.
 touchUI.render();
 
+// Camera preview does not depend on provider health or microphone readiness.
+void enableCamera();
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!pageLeaving&&document.body.dataset.phase==='idle')void enableCamera();});
+
 // Configuration presence is a setup check, not proof that providers are working.
 // Voice/photo readiness is independent of the client-specific email setup.
 fetch('/api/health',{cache:'no-store',signal:AbortSignal.timeout(10000)})
