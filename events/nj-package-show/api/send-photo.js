@@ -1,3 +1,4 @@
+import {persistPortrait,deliveryActions} from '../lib/portrait-delivery.js';
 import { photoEmailConfig } from '../lib/photo-email-config.js';
 import { Resend } from 'resend';
 import { createHash } from 'node:crypto';
@@ -64,6 +65,13 @@ export default async function handler(req, res) {
     };
     const guestName=typeof name==="string"?name.trim():"";
     if(guestName){const safe=guestName.replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));message.text="Hello "+guestName+",\n\n"+message.text;message.html=message.html.replace("<p>A NJ Package Show moment","<p>Hello "+safe+",</p><p>A NJ Package Show moment");}
+    if(process.env.BLOB_STORE_ID||process.env.BLOB_READ_WRITE_TOKEN){
+      const storage=await import('@vercel/blob');
+      const links=await persistPortrait({bytes,recipient:String(email),key:resendApiKey,mimeType:finalMime,storage});
+      const actions=deliveryActions(links);
+      message.html=message.html.replace('<p><a href="https://royalwine.com/"',actions.html+'<p><a href="https://royalwine.com/"');
+      message.text+=actions.text;
+    }
     const deliveryId = createHash('sha256').update(JSON.stringify(message)).digest('hex');
     const {data,error}=await resend.emails.send(message,{idempotencyKey:`royal-wine-photo-${deliveryId}`});
 
