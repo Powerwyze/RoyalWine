@@ -9,6 +9,7 @@ export const SCENES = [
   { id: "padre-azul", title: "Padre Azul", subtitle: "Skull stopper · Venetian sunset", gown: "a black gown matching the reference watercolor fabric finish", tuxedo, width: 1067, height: 1280, bottleCount: 1, setting: "the approved Venetian sunset terrace, white/blue Padre Azul tequila bottle with skull stopper, margarita and lime garnish" },
   { id: "don-ramon", title: "Don Ramón", subtitle: "Punta Diamante · Agave terrace", gown: "an elegant black gown with the reference watercolor fabric finish", tuxedo: "a black suit with black shirt matching the approved reference watercolor finish", width: 1280, height: 1065, bottleCount: 2, setting: "the approved agave/candle terrace with BOTH Don Ramón Punta Diamante bottles: Plata and Reposado, their diamond stoppers, authentic labels and lime-garnished tumbler" },
   { id: "lvov", title: "Lvov", subtitle: "Red cap · Venetian sunset", gown: "a black gown matching the reference watercolor fabric finish", tuxedo, width: 1067, height: 1280, bottleCount: 1, setting: "the approved Venetian sunset terrace with LVOV vodka bottle, red cap, authentic label and olive martini" },
+  { id: "photo-mask", title: "Original + Mask", subtitle: "Your photo · Royal Wine Masquerade", gown: "", tuxedo: "", width: 0, height: 0, bottleCount: 0, setting: "the unchanged original camera photograph" },
 ];
 
 export const MAX_GUESTS = 3;
@@ -40,6 +41,7 @@ export function expectedPeople(scene, guests) {
 }
 
 export function buildPrompt(scene, guestCount) {
+  if (scene.id === "photo-mask") return buildPhotoMaskPrompt(guestCount);
   if (!isValidGuestCount(guestCount)) throw new Error("Choose 1–3 guests.");
   const n = guestCount;
   const guests = n === 1 ? "guest" : "guests";
@@ -81,4 +83,16 @@ export function cleanName(n) {
 export function isValidName(n) {
   const c = cleanName(n);
   return c.length >= 2 && c.length <= 120;
+}
+
+export function buildPhotoMaskPrompt(guestCount) {
+  if (!isValidGuestCount(guestCount)) throw new Error("Choose 1–3 guests.");
+  return [
+    "Make a minimal photographic edit of the SINGLE supplied original camera photograph. This is NOT an illustration, portrait makeover, scene replacement or fashion edit.",
+    `Add one realistic ornate Venetian masquerade eye mask to each of the ${guestCount} primary foreground posing guest(s), aligned naturally to their existing eyes, nose bridge, face angle and scale. Use elegant dark metallic filigree with restrained gold accents. Both real eyes must remain visible through the mask openings. Do not replace the eyes or invent a new face.`,
+    "CHANGE ONLY the small eye-mask accessory regions. Preserve every guest's identity, facial features outside the mask, skin tone, expression, hairstyle, head size, body shape and proportions, original clothes, pose, arms, hands, held objects and accessories. Keep the actual room/background, lighting, texture, existing bystanders and composition unchanged. No slimming, retouching, beautification, smoothing, de-aging, new formalwear or watercolor/painted treatment.",
+    "Keep all original people exactly once and in the same positions. Add masks only to the requested primary foreground guests; leave background bystanders alone. Do not add, remove, clone or replace any people, props, drinks or bottles. Do not infer gender or change outfits.",
+    "Preserve the entire original photo, its framing and aspect ratio. Do not crop, zoom, stretch, expand or replace the scene. Match the source photographic realism. Return the edited photograph only.",
+    "Do NOT add text, logos, words, signatures, borders or watermarks. ROYAL WINE / MASQUERADE branding is added separately by the application above the photograph, so no lettering belongs in this model output."
+  ].join("\n");
 }
