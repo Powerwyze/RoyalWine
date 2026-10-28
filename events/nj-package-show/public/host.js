@@ -343,7 +343,14 @@ $('emailOpen').addEventListener('click',()=>{
 });
 $('emailCancel').addEventListener('click',()=>{photoEmail.cancel();$('emailInput').value='';$('emailOpen').hidden=false;note('The visitor skipped email. Do not ask for their email again unless they request it.');$('emailOpen').focus();});
 $('guestNameInput').addEventListener('input',()=>{photoEmail.editName($('guestNameInput').value);touch();});
-for(const id of ['emailInput','guestNameInput'])$(id).addEventListener('focus',()=>{activeContactInput=$(id);$('emailDomains').hidden=id!=='emailInput';});
+for(const id of ['emailInput','guestNameInput']){
+ const input=$(id);input.readOnly=true;input.inputMode='none';
+ input.addEventListener('focus',()=>{
+  activeContactInput=input;$('emailKeyboard').hidden=false;$('emailDomains').hidden=id!=='emailInput';
+  for(const field of ['emailInput','guestNameInput'])$(field).dataset.active=String(field===id);
+  $('contactKeyboardToggle').textContent=id==='emailInput'?'Next: your name':'Edit email address';
+ });
+}
 $('emailInput').addEventListener('input',()=>{photoEmail.edit($('emailInput').value);touch();});
 $('emailPanel').addEventListener('pointerdown',touch);
 $('emailPanel').addEventListener('keydown',touch);
@@ -352,21 +359,25 @@ $('emailConfirm').addEventListener('click',async()=>{
   const sent=await photoEmail.confirm();
   if(sent&&ready){note('Email service accepted the photo for delivery to the address the guest confirmed on screen. Thank them; suggest checking inbox or spam. Do not promise arrival.',true);face.focus();}
 });
+let keyboardShift=false;
 for(const row of ['1234567890','qwertyuiop','asdfghjkl','zxcvbnm','@._-+',' ']){
   const element=document.createElement('div');element.className='key-row';
-  const keys=[...row];if(row==='@._-+')keys.push('left','right','backspace');
+  const keys=[...row];if(row==='@._-+')keys.push("'",'left','right','backspace');if(row===' ')keys.push('shift','clear');
   for(const key of keys){
     const button=document.createElement('button');button.type='button';button.dataset.key=key;
-    button.textContent=key===' '?'Space':({left:'←',right:'→',backspace:'⌫'})[key]||key;
+    button.textContent=key===' '?'Space':({left:'←',right:'→',backspace:'⌫',shift:'Shift',clear:'Clear'})[key]||key;
     button.setAttribute('aria-label',({left:'Move cursor left',right:'Move cursor right',backspace:'Delete previous character'})[key]||('Type '+key));
     button.addEventListener('pointerdown',e=>e.preventDefault());
     button.addEventListener('click',()=>{
       const input=activeContactInput||$('emailInput');if(input.disabled)return;
+      if(key==='shift'){keyboardShift=!keyboardShift;button.setAttribute('aria-pressed',String(keyboardShift));document.querySelectorAll('#emailKeyboard [data-key]').forEach(b=>{if(/^[a-z]$/.test(b.dataset.key))b.textContent=keyboardShift?b.dataset.key.toUpperCase():b.dataset.key;});return;}
+      if(key==='clear'){input.value='';input.dispatchEvent(new Event('input',{bubbles:true}));input.focus({preventScroll:true});return;}
       let start=input.selectionStart??input.value.length,end=input.selectionEnd??start;
       if(key==='left'||key==='right'){const next=Math.max(0,Math.min(input.value.length,start+(key==='left'?-1:1)));input.setSelectionRange(next,next);}
       else {
         if(key==='backspace'&&start===end)start=Math.max(0,start-1);
-        const replacement=key==='backspace'?'':key;
+        const replacement=key==='backspace'?'':keyboardShift?key.toUpperCase():key;
+        if(input.value.length-(end-start)+replacement.length>input.maxLength)return;
         input.setRangeText(replacement,start,end,'end');input.dispatchEvent(new Event('input',{bubbles:true}));
       }
       input.focus({preventScroll:true});touch();
@@ -445,8 +456,8 @@ touchUI=mountTouchControls({
 });
 $('cameraEnable').addEventListener('click',enableCamera);
 $('useTouch').addEventListener('click',()=>useTouch());
-$('contactKeyboardToggle').addEventListener('click',()=>{const show=$('emailKeyboard').hidden;$('emailKeyboard').hidden=!show;$('emailDomains').hidden=!show; $('contactKeyboardToggle').textContent=show?'Hide touch keyboard':'Show touch keyboard';});
-if(innerWidth<=600){$('emailKeyboard').hidden=true;$('emailDomains').hidden=true;$('emailInput').inputMode='email';$('guestNameInput').inputMode='text';$('contactKeyboardToggle').textContent='Show touch keyboard';}
+$('contactKeyboardToggle').addEventListener('click',()=>{(activeContactInput===$('guestNameInput')?$('emailInput'):$('guestNameInput')).focus({preventScroll:true});});
+// All screen sizes use the in-app keyboard; never opt phones back into the native IME.
 touchUI.render();
 
 // Configuration presence is a setup check, not proof that providers are working.

@@ -38,10 +38,10 @@
     <div class="email-heading"><div><span class="eyebrow">YOUR EVENT MOMENT, TO GO</span><h1 id="emailTitle">Your image is generating…</h1></div><button id="emailCancel" type="button" hidden aria-label="Close contact form">Back</button></div>
     <p id="emailHelp">Enter your email and name now. Confirm and we’ll send your photo when it is ready.</p>
     <label for="emailInput">Email address</label>
-    <input id="emailInput" required type="text" inputmode="none" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" maxlength="254" aria-describedby="emailHelp emailStatus">
-    <label for="guestNameInput">Your name</label><input id="guestNameInput" required type="text" inputmode="none" autocomplete="off" maxlength="120" aria-describedby="emailHelp emailStatus">
+    <input id="emailInput" required readonly type="text" inputmode="none" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" maxlength="254" aria-describedby="emailHelp emailStatus">
+    <label for="guestNameInput">Your name</label><input id="guestNameInput" required readonly type="text" inputmode="none" autocomplete="off" maxlength="120" aria-describedby="emailHelp emailStatus">
 <p id="emailStatus" role="status"></p>
-<button id="contactKeyboardToggle" type="button">Hide touch keyboard</button>
+<button id="contactKeyboardToggle" type="button">Next: your name</button>
     <div id="emailKeyboard" aria-label="Email keyboard"></div>
     <div id="emailDomains" aria-label="Common email endings"></div>
     <button id="emailConfirm" type="button" disabled>Confirm &amp; email photo</button>
