@@ -17,7 +17,7 @@ function json(body, status = 200) {
 export function GET() {
   return json({ service: 'royal-wine-core-brands-masquerade', provider: 'openai',
     configured: hasOpenAIKey(), credentialLocation: 'vercel',
-    scenes: Object.keys(TEMPLATES), contractVersion: 1 });
+    scenes: [...Object.keys(TEMPLATES), "photo-mask"], contractVersion: 1 });
 }
 export async function POST(req) {
   if (!hasOpenAIKey()) return json({ error: 'Portrait service is not configured in Vercel.' }, 503);
@@ -26,7 +26,7 @@ export async function POST(req) {
   const sceneId = form.get('scene');
   const scene = typeof sceneId === 'string' ? getScene(sceneId) : undefined;
   const guestCount = parseGuestCount(form.get('guestCount'));
-  if (!scene || !Object.hasOwn(TEMPLATES, sceneId) || form.getAll('scene').length !== 1)
+  if (!scene || !(sceneId === "photo-mask" || Object.hasOwn(TEMPLATES, sceneId)) || form.getAll('scene').length !== 1)
     return json({ error: 'Choose a valid masquerade scene.' }, 400);
   if (guestCount === undefined || form.getAll('guestCount').length !== 1)
     return json({ error: 'Choose 1–3 guests.' }, 400);
@@ -46,19 +46,21 @@ export async function POST(req) {
   try {
     const signal = AbortSignal.any([req.signal, AbortSignal.timeout(175000)]);
     // No caller-provided URL, prompt, model or template bytes are trusted.
-    const reference = await fetch(TEMPLATES[sceneId], { signal, redirect: 'error' });
-    if (!reference.ok || !/^image\/(jpeg|png|webp)\b/i.test(reference.headers.get('content-type') || ''))
-      return json({ error: 'The approved scene reference is unavailable.' }, 503);
-    const referenceBytes = Buffer.from(await reference.arrayBuffer());
-    if (!referenceBytes.length || referenceBytes.length > MAX_BYTES)
-      return json({ error: 'The approved scene reference is unavailable.' }, 503);
-    const referenceMime = reference.headers.get('content-type').split(';')[0];
+    const guestImage = { image_url: 'data:' + guest.type + ';base64,' + Buffer.from(await guest.arrayBuffer()).toString('base64') };
+    const images = [guestImage];
+    if (sceneId !== 'photo-mask') {
+      const reference = await fetch(TEMPLATES[sceneId], { signal, redirect: 'error' });
+      if (!reference.ok || !/^image\/(jpeg|png|webp)\b/i.test(reference.headers.get('content-type') || ''))
+        return json({ error: 'The approved scene reference is unavailable.' }, 503);
+      const referenceBytes = Buffer.from(await reference.arrayBuffer());
+      if (!referenceBytes.length || referenceBytes.length > MAX_BYTES)
+        return json({ error: 'The approved scene reference is unavailable.' }, 503);
+      const referenceMime = reference.headers.get('content-type').split(';')[0];
+      images.unshift({ image_url: 'data:' + referenceMime + ';base64,' + referenceBytes.toString('base64') });
+    }
     const body = JSON.stringify({
       model: process.env.MASQUERADE_IMAGE_MODEL || 'gpt-image-2',
-      images: [
-        { image_url: 'data:' + referenceMime + ';base64,' + referenceBytes.toString('base64') },
-        { image_url: 'data:' + guest.type + ';base64,' + Buffer.from(await guest.arrayBuffer()).toString('base64') },
-      ],
+      images,
       prompt: buildPrompt(scene, guestCount),
       size: 'auto',
       quality: process.env.MASQUERADE_IMAGE_QUALITY || 'medium',
