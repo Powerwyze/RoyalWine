@@ -43,3 +43,5 @@ body[data-phase=generating] #intro{display:none}
 @media(min-height:800px){.key-row button{height:44px;min-height:44px}#emailInput,#guestNameInput{height:44px}#emailPanel{flex:0 1 auto}.theme-card img{height:100px}}
 @media(max-width:450px){.theme-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.theme-card img{display:none}.theme-card{min-height:44px}.theme-card span{font-size:13px}}
 @media(max-height:550px) and (min-width:650px){#stage{padding:4px 8px;gap:3px}#intro{display:none}#hostCaptions{height:32px;max-height:32px}.caption-speaker{display:none}#emailPanel{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px}.email-heading{grid-column:1}#emailKeyboard{grid-column:2;grid-row:1/9}#emailDomains{grid-column:2}#emailConfirm{grid-column:1}.email-note{grid-column:1/3}#contactKeyboardToggle{grid-column:1}}
+
+#emailDomains{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}#emailDomains button{font-size:12px}

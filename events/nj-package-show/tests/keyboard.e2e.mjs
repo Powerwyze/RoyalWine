@@ -14,15 +14,15 @@ try{
  await page.goto('http://127.0.0.1:'+server.address().port+'/host.html');
  await page.waitForFunction(()=>document.body.dataset.configuration==='ready');
  const fit=async(label)=>{const issues=await page.evaluate(()=>{const problems=[];if(document.documentElement.scrollHeight>innerHeight+1||document.documentElement.scrollWidth>innerWidth+1)problems.push('document overflow');for(const el of document.querySelectorAll('button,input')){const r=el.getBoundingClientRect();if(!r.width||!r.height||!el.checkVisibility()||el.disabled)continue;if(r.top<0||r.bottom>innerHeight+1||r.left<0||r.right>innerWidth+1)problems.push(el.id||el.textContent);}return problems;});assert.deepEqual(issues,[],size+' '+label);};
- await page.waitForFunction(()=>document.querySelector('#camera').videoWidth>0);await fit('home');
+ await fs.mkdir('artifacts',{recursive:true});await page.waitForFunction(()=>document.querySelector('#camera').videoWidth>0);await fit('home');await page.screenshot({path:'artifacts/home-'+size+'.png'});
 
  await page.locator('[data-theme=gallery]').tap();await page.locator('[data-touch=people-1]').tap();await page.locator('[data-touch=capture]').tap();
  await page.locator('#emailPanel:not([hidden])').waitFor();await fit('contact');
- await page.locator('[data-wait-tab=game]').tap();await fit('game');await page.locator('#memoryCards button').first().tap();assert.notEqual(await page.locator('#memoryCards button').first().textContent(),'✦');
+ await page.locator('[data-wait-tab=game]').tap();await fit('game');await page.screenshot({path:'artifacts/game-'+size+'.png'});await page.locator('#memoryCards button').first().tap();assert.notEqual(await page.locator('#memoryCards button').first().textContent(),'✦');
  await page.locator('[data-wait-tab=contact]').tap();await fit('contact return');
  for(const id of ['emailInput','guestNameInput'])assert.deepEqual(await page.locator('#'+id).evaluate(el=>({readonly:el.readOnly,mode:el.inputMode})),{readonly:true,mode:'none'});
  const tap=async k=>{await page.locator('#emailKeyboard button').evaluateAll((buttons,key)=>buttons.find(b=>b.dataset.key===key).click(),k);};
- await page.locator('#emailInput').tap();for(const k of 'testx')await tap(k);await tap('backspace');
+ await page.locator('#emailInput').tap();await fit('email keyboard');await page.screenshot({path:'artifacts/email-'+size+'.png'});for(const k of 'testx')await tap(k);await tap('backspace');
  await page.getByRole('button',{name:'Use @gmail.com',exact:true}).tap();
  assert.equal(await page.locator('#emailInput').inputValue(),'test@gmail.com');
  await page.locator('#contactKeyboardToggle').tap();assert.equal(await page.evaluate(()=>document.activeElement.id),'guestNameInput');
